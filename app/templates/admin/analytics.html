@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}Platform Analytics - CollabLearn Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-lg-4">
+    <!-- Header & Range Filter -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h2 class="h3 fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                <i class="bi bi-graph-up-arrow text-info"></i>
+                Academic &amp; Operational Analytics
+            </h2>
+            <p class="text-muted small mb-0">Deterministic local aggregation of academic metrics, engagement funnels, and performance trends.</p>
+        </div>
+
+        <!-- Date Range Filter -->
+        <div class="d-flex align-items-center gap-2">
+            <span class="small fw-semibold text-muted">Time Window:</span>
+            <div class="btn-group btn-group-sm" role="group">
+                <a href="{{ url_for('admin.analytics', range='7') }}" class="btn btn-outline-primary {% if data.date_range == '7' %}active{% endif %}">7 Days</a>
+                <a href="{{ url_for('admin.analytics', range='30') }}" class="btn btn-outline-primary {% if data.date_range == '30' %}active{% endif %}">30 Days</a>
+                <a href="{{ url_for('admin.analytics', range='90') }}" class="btn btn-outline-primary {% if data.date_range == '90' %}active{% endif %}">90 Days</a>
+                <a href="{{ url_for('admin.analytics', range='all') }}" class="btn btn-outline-primary {% if data.date_range == 'all' %}active{% endif %}">All Time</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 1: Academic Demographics Charts -->
+    <div class="row g-4 mb-4">
+        <!-- Programs -->
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3">
+                <h6 class="fw-bold text-dark mb-2">Users by Program</h6>
+                <div style="position: relative; height: 180px;">
+                    <canvas id="programsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Academic Year -->
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3">
+                <h6 class="fw-bold text-dark mb-2">Users by Year</h6>
+                <div style="position: relative; height: 180px;">
+                    <canvas id="yearsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Peer Request Funnel -->
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3">
+                <h6 class="fw-bold text-dark mb-2">Buddy Request Funnel</h6>
+                <div style="position: relative; height: 180px;">
+                    <canvas id="funnelChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Assistant Usage -->
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-3">
+                <h6 class="fw-bold text-dark mb-2">AI Feature Usage</h6>
+                <div style="position: relative; height: 180px;">
+                    <canvas id="aiUsageChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 2: Doubts & Resolution by Subject -->
+    <div class="row g-4 mb-4">
+        <div class="col-12 col-lg-8">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark mb-0">Doubts by Subject: Open vs. Solved</h5>
+                    <span class="badge bg-light text-muted border">Resolution Ratio</span>
+                </div>
+                <div style="position: relative; height: 280px;">
+                    <canvas id="doubtsChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-lg-4">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-4 d-flex flex-column justify-content-between">
+                <div>
+                    <h5 class="fw-bold text-dark mb-3">Resolution Velocity</h5>
+                    <div class="p-3 bg-light rounded-3 text-center mb-4">
+                        <div class="fs-2 fw-bold text-primary">{{ data.avg_time_to_first_answer_hours }} hrs</div>
+                        <div class="small text-muted">Average Time to First Solution</div>
+                    </div>
+                    
+                    <h6 class="fw-bold text-dark mb-2">Top Peer Helpers</h6>
+                    {% if data.top_helpers %}
+                        <ul class="list-group list-group-flush small">
+                            {% for h in data.top_helpers[:5] %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-2">
+                                <div>
+                                    <span class="fw-semibold">{{ h.name }}</span>
+                                    <div class="text-muted" style="font-size: 0.75rem;">{{ h.subject }}</div>
+                                </div>
+                                <span class="badge bg-primary rounded-pill">{{ h.points }} pts</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    {% else %}
+                        <p class="text-muted small">No reputation points recorded yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Row 3: Quiz Assessment & Moderation Trends -->
+    <div class="row g-4">
+        <!-- Quiz Mastery -->
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-4">
+                <h5 class="fw-bold text-dark mb-3">AI Quiz Subject Mastery</h5>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0 small">
+                        <thead class="table-light text-uppercase text-muted">
+                            <tr>
+                                <th>Subject</th>
+                                <th class="text-center">Attempts</th>
+                                <th class="text-end">Avg Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% if data.quiz_metrics %}
+                                {% for q in data.quiz_metrics %}
+                                <tr>
+                                    <td class="fw-medium">{{ q.subject }}</td>
+                                    <td class="text-center">{{ q.attempts }}</td>
+                                    <td class="text-end fw-bold {% if q.avg_score >= 80 %}text-success{% elif q.avg_score >= 50 %}text-warning{% else %}text-danger{% endif %}">
+                                        {{ q.avg_score }}%
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <tr>
+                                    <td colspan="3" class="text-center py-4 text-muted">No quiz attempts recorded in this timeframe.</td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Moderation Weekly Trends -->
+        <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm rounded-4 h-100 p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="fw-bold text-dark mb-0">Safety Interceptions (Last 4 Weeks)</h5>
+                    <span class="badge bg-light text-muted border">Weekly Volume</span>
+                </div>
+                <div style="position: relative; height: 240px;">
+                    <canvas id="moderationChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Programs Chart
+        const progData = JSON.parse('{{ programs_json | safe }}');
+        const progCtx = document.getElementById('programsChart');
+        if (progCtx) {
+            new Chart(progCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(progData),
+                    datasets: [{
+                        data: Object.values(progData),
+                        backgroundColor: ['#2563eb', '#38bdf8', '#818cf8', '#c084fc', '#94a3b8']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // Years Chart
+        const yearsData = JSON.parse('{{ years_json | safe }}');
+        const yearsCtx = document.getElementById('yearsChart');
+        if (yearsCtx) {
+            new Chart(yearsCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(yearsData).map(y => `Yr ${y}`),
+                    datasets: [{
+                        data: Object.values(yearsData),
+                        backgroundColor: '#3b82f6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+        }
+
+        // Funnel Chart
+        const funnelData = JSON.parse('{{ funnel_json | safe }}');
+        const funnelCtx = document.getElementById('funnelChart');
+        if (funnelCtx) {
+            new Chart(funnelCtx, {
+                type: 'pie',
+                data: {
+                    labels: Object.keys(funnelData),
+                    datasets: [{
+                        data: Object.values(funnelData),
+                        backgroundColor: ['#eab308', '#22c55e', '#ef4444', '#94a3b8']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        // AI Usage Chart
+        const aiData = JSON.parse('{{ ai_usage_json | safe }}');
+        const aiCtx = document.getElementById('aiUsageChart');
+        if (aiCtx) {
+            new Chart(aiCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Hints', 'Quizzes', 'Paths'],
+                    datasets: [{
+                        data: [aiData.hints || 0, aiData.quizzes || 0, aiData.paths || 0],
+                        backgroundColor: ['#10b981', '#6366f1', '#f59e0b']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+        }
+
+        // Doubts by Subject Bar Chart
+        const doubtsData = JSON.parse('{{ doubts_by_subject_json | safe }}');
+        const doubtsCtx = document.getElementById('doubtsChart');
+        if (doubtsCtx) {
+            const subjects = Object.keys(doubtsData);
+            const openCounts = subjects.map(s => doubtsData[s].open);
+            const solvedCounts = subjects.map(s => doubtsData[s].solved);
+
+            new Chart(doubtsCtx, {
+                type: 'bar',
+                data: {
+                    labels: subjects,
+                    datasets: [
+                        { label: 'Solved', data: solvedCounts, backgroundColor: '#22c55e' },
+                        { label: 'Open', data: openCounts, backgroundColor: '#f97316' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'top' } },
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
+                    }
+                }
+            });
+        }
+
+        // Moderation Weekly Trend
+        const modWeeks = JSON.parse('{{ moderation_weeks_json | safe }}');
+        const modCounts = JSON.parse('{{ moderation_counts_json | safe }}');
+        const modCtx = document.getElementById('moderationChart');
+        if (modCtx) {
+            new Chart(modCtx, {
+                type: 'line',
+                data: {
+                    labels: modWeeks,
+                    datasets: [{
+                        label: 'Violations Flagged',
+                        data: modCounts,
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

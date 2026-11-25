@@ -1,0 +1,672 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Welcome Header Banner -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card card-modern p-4 bg-white border-0 shadow-sm">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div>
+                        <div class="d-flex align-items-center flex-wrap gap-2 mb-1">
+                            <h2 class="fw-bold mb-0 text-dark">Welcome back, {{ user.name }}!</h2>
+                            {% if user.role == 'teacher' %}
+                                <span class="badge bg-success-subtle text-success border border-success px-3 py-1 fw-bold">Faculty Portal</span>
+                            {% else %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-1 fw-bold">Student Account</span>
+                            {% endif %}
+                        </div>
+                        <p class="text-muted mb-0 small mt-1">
+                            {% if user.college_name %}<i class="bi bi-building me-1"></i> {{ user.college_name }} &bull; {% endif %}
+                            {% if user.is_student %}
+                                <i class="bi bi-mortarboard me-1"></i> {{ user.academic_summary }}
+                                {% if user.enrollment_no %} &bull; Roll: {{ user.enrollment_no }}{% endif %}
+                            {% else %}
+                                <i class="bi bi-award me-1"></i> {{ user.designation }} ({{ user.department }})
+                                {% if user.employee_id %} &bull; Emp ID: {{ user.employee_id }}{% endif %}
+                            {% endif %}
+                            &bull; Joined {{ user.created_at.strftime('%b %d, %Y') }}
+                        </p>
+                        {% if user.is_teacher and stats.teacher_subjects %}
+                        <div class="d-flex flex-wrap gap-1 mt-2 align-items-center">
+                            <span class="small text-muted fw-semibold me-1"><i class="bi bi-journals me-1"></i>Teaching:</span>
+                            {% for s in stats.teacher_subjects %}
+                                <span class="badge bg-light text-dark border">{{ s }}</span>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    {% if user.is_student %}
+                    <!-- Student Honor Badge Display -->
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="text-end">
+                            <div class="small text-muted fw-semibold">Overall Reputation</div>
+                            <div class="h4 fw-bold text-primary mb-0">{{ stats.total_reputation }} pts</div>
+                        </div>
+                        <div>
+                            {% if stats.overall_badge == 'Guru' %}
+                                <span class="badge badge-guru px-3 py-2 fs-6"><i class="bi bi-gem me-1"></i> Guru</span>
+                            {% elif stats.overall_badge == 'Expert' %}
+                                <span class="badge badge-expert px-3 py-2 fs-6"><i class="bi bi-star-fill me-1"></i> Expert</span>
+                            {% elif stats.overall_badge == 'Helper' %}
+                                <span class="badge badge-helper px-3 py-2 fs-6"><i class="bi bi-patch-check me-1"></i> Helper</span>
+                            {% else %}
+                                <span class="badge badge-learner px-3 py-2 fs-6"><i class="bi bi-mortarboard me-1"></i> Learner</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% else %}
+                    <!-- Teacher Quick Status -->
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-success-subtle text-success border border-success px-3 py-2 rounded-pill">
+                            <i class="bi bi-patch-check-fill me-1"></i> Verified Answers: {{ stats.verified_answers_count }}
+                        </span>
+                        <a href="{{ url_for('moderation.index') }}" class="btn btn-sm btn-outline-warning rounded-pill px-3 fw-semibold text-dark">
+                            <i class="bi bi-shield-exclamation me-1"></i> Review Queue
+                            {% if stats.pending_moderation_count > 0 %}
+                                <span class="badge bg-danger text-white rounded-pill ms-1">{{ stats.pending_moderation_count }}</span>
+                            {% endif %}
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STUDENT DASHBOARD -->
+    {% if user.is_student %}
+    <!-- Quick Stat Cards -->
+    <div class="row g-3 mb-4">
+        <!-- Pending Buddy Requests -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="{{ url_for('requests.list_requests') }}" class="text-decoration-none">
+                <div class="card card-modern card-hover h-100 p-3 bg-white">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="stat-icon stat-icon-blue">
+                            <i class="bi bi-inbox-fill"></i>
+                        </div>
+                        {% if stats.pending_requests_count > 0 %}
+                            <span class="badge bg-danger rounded-pill">{{ stats.pending_requests_count }} new</span>
+                        {% else %}
+                            <span class="badge bg-light text-muted border">0</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small fw-semibold">Buddy Requests</div>
+                    <div class="h5 fw-bold mb-0 text-dark">
+                        {{ stats.pending_requests_count }} Pending
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Pending Group Invites -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="{{ url_for('groups.index') }}" class="text-decoration-none">
+                <div class="card card-modern card-hover h-100 p-3 bg-white">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="stat-icon stat-icon-indigo">
+                            <i class="bi bi-collection-fill"></i>
+                        </div>
+                        {% if stats.pending_group_invites_count > 0 %}
+                            <span class="badge bg-danger rounded-pill">{{ stats.pending_group_invites_count }} new</span>
+                        {% else %}
+                            <span class="badge bg-light text-muted border">0</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small fw-semibold">Group Invites</div>
+                    <div class="h5 fw-bold mb-0 text-dark">
+                        {{ stats.pending_group_invites_count }} Pending
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- My Open Doubts -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="{{ url_for('doubts.index') }}" class="text-decoration-none">
+                <div class="card card-modern card-hover h-100 p-3 bg-white">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="stat-icon stat-icon-amber">
+                            <i class="bi bi-question-circle-fill"></i>
+                        </div>
+                        <span class="badge bg-light text-muted border">Ask</span>
+                    </div>
+                    <div class="text-muted small fw-semibold">My Open Doubts</div>
+                    <div class="h5 fw-bold mb-0 text-dark">
+                        {{ stats.my_open_doubts_count }} Active
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Practice Quizzes Completed -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="{{ url_for('quiz.history') }}" class="text-decoration-none">
+                <div class="card card-modern card-hover h-100 p-3 bg-white">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="stat-icon stat-icon-emerald">
+                            <i class="bi bi-lightning-charge-fill"></i>
+                        </div>
+                        <span class="badge bg-light text-muted border">AI</span>
+                    </div>
+                    <div class="text-muted small fw-semibold">Quizzes Taken</div>
+                    <div class="h5 fw-bold mb-0 text-dark">
+                        {{ stats.quizzes_taken_count }} Completed
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <!-- Weak Subjects Action Hub (Core Learning Guidance) -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card card-modern p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-exclamation-triangle-fill text-danger me-2"></i> Focus Areas (Weak Subjects)
+                        </h5>
+                        <small class="text-muted">Targeted peer matching and AI practice quizzes to boost your subject proficiency</small>
+                    </div>
+                    <a href="{{ url_for('profile.profile') }}" class="btn btn-sm btn-outline-secondary rounded-pill">
+                        <i class="bi bi-pencil me-1"></i> Update Skills
+                    </a>
+                </div>
+
+                {% if stats.weak_skills %}
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+                    {% for ws in stats.weak_skills %}
+                    <div class="col">
+                        <div class="border rounded-3 p-3 bg-light bg-opacity-50 h-100 d-flex flex-column justify-content-between">
+                            <div>
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <h6 class="fw-bold mb-0 text-dark">{{ ws.subject }}</h6>
+                                    <span class="badge bg-danger-subtle text-danger border border-danger">Weak</span>
+                                </div>
+                                <p class="small text-muted mb-3">Connect with strong peers or test your understanding with an AI quiz.</p>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <a href="{{ url_for('matches.matches', subject=ws.subject) }}" class="btn btn-sm btn-outline-primary rounded-pill flex-fill">
+                                    <i class="bi bi-people-fill me-1"></i> Find Buddy
+                                </a>
+                                <a href="{{ url_for('quiz.index', subject=ws.subject) }}" class="btn btn-sm btn-outline-warning rounded-pill flex-fill text-dark">
+                                    <i class="bi bi-lightning-charge-fill me-1"></i> Quiz
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted bg-light rounded-3">
+                    <i class="bi bi-check-circle-fill fs-2 text-success mb-2 d-block"></i>
+                    <h6 class="fw-bold mb-1">No weak subjects declared!</h6>
+                    <p class="small mb-2">Add subjects where you need assistance on your profile to unlock recommended study partners.</p>
+                    <a href="{{ url_for('profile.profile') }}" class="btn btn-sm btn-primary rounded-pill px-3">
+                        Set Subject Skill Levels
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Doubts I Can Answer & Quick Shortcuts -->
+    <div class="row g-4 mb-4">
+        <!-- Left: Doubts I Can Answer -->
+        <div class="col-12 col-lg-7">
+            <div class="card card-modern p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-chat-heart-fill text-success me-2"></i> Doubts I Can Answer
+                        </h5>
+                        <small class="text-muted">Open questions in subjects where you are rated Strong</small>
+                    </div>
+                    <a href="{{ url_for('doubts.index') }}" class="small fw-semibold text-primary text-decoration-none">
+                        Browse All &rarr;
+                    </a>
+                </div>
+
+                {% if stats.doubts_can_answer %}
+                <div class="list-group list-group-flush">
+                    {% for d in stats.doubts_can_answer %}
+                    <div class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <span class="badge bg-primary-subtle text-primary border border-primary me-1">{{ d.subject }}</span>
+                                <a href="{{ url_for('doubts.detail', doubt_id=d.id) }}" class="fw-bold text-dark text-decoration-none hover-primary">
+                                    {{ d.title }}
+                                </a>
+                            </div>
+                            <a href="{{ url_for('doubts.detail', doubt_id=d.id) }}" class="btn btn-sm btn-outline-success rounded-pill px-2 py-0" style="font-size: 0.75rem;">
+                                Answer &rarr;
+                            </a>
+                        </div>
+                        <small class="text-muted d-block mt-1">
+                            Asked {{ d.created_at.strftime('%b %d, %Y') }} &bull; {{ d.answers.count() }} answers
+                        </small>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted bg-light rounded-3">
+                    <i class="bi bi-emoji-smile fs-2 text-primary opacity-50 mb-2 d-block"></i>
+                    <h6 class="fw-bold mb-1">All caught up!</h6>
+                    <p class="small mb-0">No open doubts waiting for answers in your strong subjects right now. Check back soon or browse the forum.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right: Reputation & Badges -->
+        <div class="col-12 col-lg-5">
+            <div class="card card-modern p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-award-fill text-warning me-1"></i> My Reputation &amp; Badges
+                    </h5>
+                    <a href="{{ url_for('main.leaderboard') }}" class="small fw-semibold text-primary text-decoration-none">
+                        Leaderboard &rarr;
+                    </a>
+                </div>
+
+                {% if stats.my_reputations %}
+                <div class="list-group list-group-flush">
+                    {% for rep in stats.my_reputations %}
+                    <div class="list-group-item px-0 d-flex justify-content-between align-items-center">
+                        <div>
+                            <div class="fw-semibold small text-dark">{{ rep.subject }}</div>
+                            <small class="text-muted">
+                                {% if rep.badge %}
+                                    <span class="badge badge-{{ rep.badge|lower }}" style="font-size: 0.7rem;">{{ rep.badge }}</span>
+                                {% else %}
+                                    <span class="badge badge-learner" style="font-size: 0.7rem;">Learner</span>
+                                {% endif %}
+                            </small>
+                        </div>
+                        <span class="fw-bold text-primary">{{ rep.score }} pts</span>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted bg-light rounded-3">
+                    <i class="bi bi-award fs-1 text-secondary opacity-50 mb-2 d-block"></i>
+                    <p class="small mb-2">You haven't earned reputation points yet.</p>
+                    <a href="{{ url_for('doubts.index') }}" class="btn btn-sm btn-primary rounded-pill px-3">
+                        Answer Doubts to Earn Points
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- TEACHER / FACULTY DASHBOARD -->
+    {% else %}
+    <!-- Faculty Key Stats Row -->
+    <div class="row g-3 mb-4">
+        <!-- Moderation Queue -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="{{ url_for('moderation.index') }}" class="text-decoration-none">
+                <div class="card card-modern card-hover h-100 p-3 bg-white">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="stat-icon stat-icon-amber">
+                            <i class="bi bi-shield-exclamation"></i>
+                        </div>
+                        {% if stats.pending_moderation_count > 0 %}
+                            <span class="badge bg-danger rounded-pill">{{ stats.pending_moderation_count }} pending</span>
+                        {% else %}
+                            <span class="badge bg-success-subtle text-success">Clean</span>
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small fw-semibold">Reported Messages</div>
+                    <div class="h5 fw-bold mb-0 text-dark">
+                        {{ stats.pending_moderation_count }} Need Review
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Unanswered Doubts in My Subjects -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <a href="{{ url_for('doubts.index') }}" class="text-decoration-none">
+                <div class="card card-modern card-hover h-100 p-3 bg-white">
+                    <div class="d-flex align-items-center justify-content-between mb-2">
+                        <div class="stat-icon stat-icon-blue">
+                            <i class="bi bi-question-circle"></i>
+                        </div>
+                        <span class="badge bg-light text-muted border">My Subjects</span>
+                    </div>
+                    <div class="text-muted small fw-semibold">Unanswered Doubts</div>
+                    <div class="h5 fw-bold mb-0 text-dark">
+                        {{ stats.unanswered_doubts_count }} In My Area
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Needs Human Help -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card card-modern h-100 p-3 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="stat-icon stat-icon-purple">
+                        <i class="bi bi-person-raised-hand"></i>
+                    </div>
+                    <span class="badge bg-warning-subtle text-dark">Priority</span>
+                </div>
+                <div class="text-muted small fw-semibold">Needs Human Guidance</div>
+                <div class="h5 fw-bold mb-0 text-dark">
+                    {{ stats.needs_human_doubts|length }} Escalated
+                </div>
+            </div>
+        </div>
+
+        <!-- Faculty Verified Answers -->
+        <div class="col-12 col-sm-6 col-lg-3">
+            <div class="card card-modern h-100 p-3 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-2">
+                    <div class="stat-icon stat-icon-emerald">
+                        <i class="bi bi-patch-check-fill"></i>
+                    </div>
+                    <span class="badge bg-success-subtle text-success">+15 pts to author</span>
+                </div>
+                <div class="text-muted small fw-semibold">My Verified Answers</div>
+                <div class="h5 fw-bold mb-0 text-dark">
+                    {{ stats.verified_answers_count }} Endorsed
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Doubt Volume Analytics & Class Insights -->
+    <div class="row g-4 mb-4">
+        <!-- Left: Doubt Volume Bar Chart (Chart.js) -->
+        <div class="col-12 col-lg-8">
+            <div class="card card-modern p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-bar-chart-line-fill text-primary me-2"></i> Doubts Volume in Your Subjects
+                        </h5>
+                        <small class="text-muted">Open queries vs solved solutions across your assigned curriculum</small>
+                    </div>
+                    <span class="badge bg-light text-muted border">Curriculum Analytics</span>
+                </div>
+
+                {% if stats.teacher_subjects %}
+                <div style="position: relative; height: 260px;">
+                    <canvas id="doubtsVolumeChart"></canvas>
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted bg-light rounded-3">
+                    <i class="bi bi-journal-x fs-2 text-secondary opacity-50 mb-2 d-block"></i>
+                    <p class="small mb-2">You haven't assigned any teaching subjects yet.</p>
+                    <a href="{{ url_for('profile.profile') }}" class="btn btn-sm btn-primary rounded-pill px-3">
+                        Assign Subjects in Faculty Profile
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Right: Class Insights (Most Asked Topics via TF-IDF) -->
+        <div class="col-12 col-lg-4">
+            <div class="card card-modern p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-lightbulb-fill text-warning me-1"></i> Class Insights
+                    </h5>
+                    <span class="badge bg-warning-subtle text-dark border">Past 30 Days</span>
+                </div>
+                <p class="small text-muted mb-3">Frequently asked concepts in your subjects extracted from student questions.</p>
+
+                {% if stats.class_topics %}
+                <div class="d-flex flex-column gap-2">
+                    {% for topic in stats.class_topics %}
+                    <div>
+                        <div class="d-flex justify-content-between small fw-semibold mb-1">
+                            <span class="text-dark">{{ topic.topic }}</span>
+                            <span class="text-primary">{{ topic.score }}%</span>
+                        </div>
+                        <div class="progress" style="height: 6px;">
+                            <div class="progress-bar bg-primary" role="progressbar" style="width: {{ topic.score }}%;" aria-valuenow="{{ topic.score }}" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted bg-light rounded-3">
+                    <i class="bi bi-chat-left-dots fs-3 text-secondary opacity-50 mb-2 d-block"></i>
+                    <p class="small mb-0">No recent doubts posted in your subjects to extract topic trends.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Answers Awaiting Verification & Unanswered Doubts -->
+    <div class="row g-4 mb-4">
+        <!-- Answers Awaiting Faculty Verification -->
+        <div class="col-12 col-lg-6">
+            <div class="card card-modern p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-patch-question-fill text-success me-2"></i> Answers Awaiting Verification
+                        </h5>
+                        <small class="text-muted">Student answers in your subjects ready for faculty endorsement</small>
+                    </div>
+                    <span class="badge bg-success-subtle text-success border border-success">{{ stats.answers_awaiting_verification|length }}</span>
+                </div>
+
+                {% if stats.answers_awaiting_verification %}
+                <div class="list-group list-group-flush">
+                    {% for ans in stats.answers_awaiting_verification %}
+                    <div class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <span class="badge bg-light text-dark border me-1">{{ ans.doubt.subject }}</span>
+                                <a href="{{ url_for('doubts.detail', doubt_id=ans.doubt_id) }}" class="fw-semibold text-dark text-decoration-none">
+                                    {{ ans.doubt.title }}
+                                </a>
+                                <p class="small text-muted mb-0 text-truncate mt-1" style="max-width: 380px;">
+                                    "{{ ans.body }}" &bull; by <strong>{{ ans.user.name }}</strong>
+                                </p>
+                            </div>
+                            <div class="d-flex flex-column gap-1 align-items-end">
+                                <form method="POST" action="{{ url_for('doubts.verify', answer_id=ans.id) }}" class="d-inline">
+                                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                    <button type="submit" class="btn btn-sm btn-success rounded-pill px-2 py-0" style="font-size: 0.75rem;" title="1-click Verify">
+                                        <i class="bi bi-patch-check"></i> Verify
+                                    </button>
+                                </form>
+                                <a href="{{ url_for('doubts.detail', doubt_id=ans.doubt_id) }}" class="small text-primary text-decoration-none">
+                                    View Thread &rarr;
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted bg-light rounded-3">
+                    <i class="bi bi-check2-all fs-2 text-success opacity-50 mb-2 d-block"></i>
+                    <h6 class="fw-bold mb-1">No unverified answers</h6>
+                    <p class="small mb-0">All answers in your assigned subjects are verified or no answers have been submitted yet.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Priority / Needs Human Help & Unanswered Doubts -->
+        <div class="col-12 col-lg-6">
+            <div class="card card-modern p-4 h-100">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-person-fill-exclamation text-warning me-2"></i> Escalated &amp; Unanswered Doubts
+                        </h5>
+                        <small class="text-muted">Questions needing instructor attention or escalated by students</small>
+                    </div>
+                    <a href="{{ url_for('doubts.index') }}" class="small fw-semibold text-primary text-decoration-none">
+                        Forum &rarr;
+                    </a>
+                </div>
+
+                {% if stats.needs_human_doubts or stats.unanswered_doubts %}
+                <div class="list-group list-group-flush">
+                    {% for d in stats.needs_human_doubts %}
+                    <div class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <span class="badge bg-warning text-dark me-1"><i class="bi bi-lightning-fill"></i> Escalated</span>
+                                <span class="badge bg-light text-dark border">{{ d.subject }}</span>
+                                <a href="{{ url_for('doubts.detail', doubt_id=d.id) }}" class="fw-bold text-dark text-decoration-none">
+                                    {{ d.title }}
+                                </a>
+                            </div>
+                            <a href="{{ url_for('doubts.detail', doubt_id=d.id) }}" class="btn btn-sm btn-outline-warning text-dark rounded-pill px-2 py-0" style="font-size: 0.75rem;">
+                                Answer &rarr;
+                            </a>
+                        </div>
+                    </div>
+                    {% endfor %}
+
+                    {% for d in stats.unanswered_doubts %}
+                    {% if d not in stats.needs_human_doubts %}
+                    <div class="list-group-item px-0 py-2">
+                        <div class="d-flex justify-content-between align-items-start gap-2">
+                            <div>
+                                <span class="badge bg-light text-dark border me-1">{{ d.subject }}</span>
+                                <a href="{{ url_for('doubts.detail', doubt_id=d.id) }}" class="fw-semibold text-dark text-decoration-none">
+                                    {{ d.title }}
+                                </a>
+                            </div>
+                            <a href="{{ url_for('doubts.detail', doubt_id=d.id) }}" class="btn btn-sm btn-outline-primary rounded-pill px-2 py-0" style="font-size: 0.75rem;">
+                                Answer &rarr;
+                            </a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted bg-light rounded-3">
+                    <i class="bi bi-chat-check fs-2 text-primary opacity-50 mb-2 d-block"></i>
+                    <h6 class="fw-bold mb-1">No unanswered doubts</h6>
+                    <p class="small mb-0">No active student questions in your assigned subjects are waiting for instructor help.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Student Contributors in Faculty Subjects -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card card-modern p-4">
+                <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-dark">
+                            <i class="bi bi-star-fill text-warning me-2"></i> Top Student Contributors in Your Subjects
+                        </h5>
+                        <small class="text-muted">High-performing peer helpers providing verified solutions in your curriculum</small>
+                    </div>
+                    <a href="{{ url_for('main.leaderboard') }}" class="btn btn-sm btn-outline-primary rounded-pill">
+                        Global Leaderboard &rarr;
+                    </a>
+                </div>
+
+                {% if stats.top_contributors %}
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-5 g-3">
+                    {% for student, score in stats.top_contributors %}
+                    <div class="col">
+                        <div class="border rounded-3 p-3 bg-light text-center h-100">
+                            <div class="stat-icon stat-icon-blue mx-auto mb-2" style="width: 42px; height: 42px; font-size: 1.2rem;">
+                                <i class="bi bi-person-fill"></i>
+                            </div>
+                            <h6 class="fw-bold mb-0 text-dark text-truncate">{{ student.name }}</h6>
+                            <small class="text-muted d-block mb-1">{{ student.branch or student.specialization or 'Student' }}</small>
+                            <span class="badge bg-primary px-3 py-1">{{ score }} pts</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-3 text-muted">
+                    <p class="small mb-0">No student reputation points earned in your subjects yet.</p>
+                </div>
+                {% endif %}
+
+                <div class="alert alert-light border small text-muted mb-0 mt-3 d-flex align-items-center gap-2">
+                    <i class="bi bi-info-circle text-primary"></i>
+                    <span><strong>Note:</strong> Doubts in subjects you do not teach are still fully accessible via the general <a href="{{ url_for('doubts.index') }}" class="fw-semibold text-primary">Doubt Resolution Forum</a>.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% if user.is_teacher and stats.teacher_subjects %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const ctx = document.getElementById("doubtsVolumeChart");
+    if (!ctx) return;
+
+    const labels = {{ stats.chart_labels|safe }};
+    const openData = {{ stats.chart_open|safe }};
+    const solvedData = {{ stats.chart_solved|safe }};
+
+    new Chart(ctx, {
+        type: "bar",
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: "Open Doubts",
+                    data: openData,
+                    backgroundColor: "rgba(239, 68, 68, 0.75)",
+                    borderColor: "rgba(239, 68, 68, 1)",
+                    borderWidth: 1,
+                    borderRadius: 4
+                },
+                {
+                    label: "Solved Doubts",
+                    data: solvedData,
+                    backgroundColor: "rgba(16, 185, 129, 0.75)",
+                    borderColor: "rgba(16, 185, 129, 1)",
+                    borderWidth: 1,
+                    borderRadius: 4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1,
+                        precision: 0
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    position: "top"
+                }
+            }
+        }
+    });
+});
+</script>
+{% endif %}
+
+{% endblock %}

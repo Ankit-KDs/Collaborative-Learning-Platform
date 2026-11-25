@@ -1,0 +1,261 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 860px;">
+
+    <!-- Back Navigation -->
+    <div class="mb-3">
+        <a href="{{ url_for('doubts.index') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-arrow-left me-1"></i> Back to Questions
+        </a>
+    </div>
+
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-header bg-white py-3 px-4 border-bottom">
+            <div class="d-flex align-items-center gap-3">
+                <div class="brand-icon-box bg-primary text-white" style="width: 44px; height: 44px; font-size: 1.25rem;">
+                    <i class="bi bi-patch-question-fill"></i>
+                </div>
+                <div>
+                    <h4 class="fw-bold mb-0 text-dark">Ask a Question / Post a Doubt</h4>
+                    <p class="text-muted small mb-0">
+                        Describe what you are trying to understand. Peer helpers and teachers will assist.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="card-body p-4">
+
+            <!-- Live Semantic Similarity Match Box (TF-IDF + Cosine Similarity) -->
+            <div id="similarDoubtsBox" class="alert alert-warning border border-warning-subtle rounded-3 p-3 mb-4 d-none">
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+                    <strong class="text-dark">Similar doubts already asked in this subject:</strong>
+                </div>
+                <p class="small text-muted mb-2">
+                    Review these existing questions first. An answer may already exist for your exact issue:
+                </p>
+                <div id="similarDoubtsList" class="list-group list-group-flush border-top pt-2">
+                    <!-- Populated dynamically via XSS-safe textContent -->
+                </div>
+            </div>
+
+            <form method="POST" action="{{ url_for('doubts.ask') }}" enctype="multipart/form-data">
+                {{ form.hidden_tag() }}
+
+                <!-- 1. Subject Area -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">
+                        <i class="bi bi-journal-bookmark me-1"></i>Subject Area <span class="text-danger">*</span>
+                    </label>
+                    {{ form.subject(id="doubtSubject", class="form-select form-select-modern rounded-3" + (" is-invalid" if form.subject.errors else "")) }}
+                    {% if form.subject.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.subject.errors[0] }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- 2. Doubt Title -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">
+                        <i class="bi bi-fonts me-1"></i>Doubt Title <span class="text-danger">*</span>
+                    </label>
+                    {{ form.title(id="doubtTitle", class="form-control form-control-modern rounded-3" + (" is-invalid" if form.title.errors else ""), placeholder="e.g. How does Dijkstra's algorithm handle negative weight cycles?", maxlength=150) }}
+                    <div class="d-flex justify-content-between text-muted small mt-1">
+                        <span>Be specific and imagine you are asking a question to another person.</span>
+                        <span id="titleCounter">0/150</span>
+                    </div>
+                    {% if form.title.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.title.errors[0] }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- 3. Detailed Explanation / Code -->
+                <div class="mb-3">
+                    <label class="form-label fw-semibold text-secondary">
+                        <i class="bi bi-text-paragraph me-1"></i>Detailed Explanation / What have you tried? <span class="text-danger">*</span>
+                    </label>
+                    {{ form.body(id="doubtBody", rows=6, class="form-control form-control-modern rounded-3" + (" is-invalid" if form.body.errors else ""), placeholder="Include any code snippets, input/output examples, or conceptual points where you got stuck...", maxlength=3000) }}
+                    <div class="d-flex justify-content-between text-muted small mt-1">
+                        <span>Minimum 10 characters, maximum 3000 characters.</span>
+                        <span id="bodyCounter">0/3000</span>
+                    </div>
+                    {% if form.body.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.body.errors[0] }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- 4. Image Attachment -->
+                <div class="mb-4">
+                    <label class="form-label fw-semibold text-secondary">
+                        <i class="bi bi-image me-1"></i>Attach Diagram or Screenshot (Optional)
+                    </label>
+                    {{ form.image(class="form-control form-control-modern rounded-3" + (" is-invalid" if form.image.errors else ""), accept=".jpg,.jpeg,.png") }}
+                    <div class="text-muted small mt-1">Supported formats: JPG, JPEG, PNG. Maximum file size: 5MB.</div>
+                    {% if form.image.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.image.errors[0] }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- 5. Anonymous Posting Checkbox -->
+                <div class="card p-3 bg-light border rounded-3 mb-4">
+                    <div class="form-check d-flex align-items-center gap-2">
+                        {{ form.is_anonymous(id="doubtAnonymous", class="form-check-input mt-0") }}
+                        <label for="doubtAnonymous" class="form-check-label text-dark fw-semibold">
+                            <i class="bi bi-incognito me-1"></i>{{ form.is_anonymous.label.text }}
+                        </label>
+                    </div>
+                    <div class="text-muted small ps-4 mt-1">
+                        Your identity will be concealed from peers and teachers across all platform views.
+                    </div>
+                </div>
+
+                <!-- Submit Button -->
+                <div class="d-flex justify-content-end gap-2">
+                    <a href="{{ url_for('doubts.index') }}" class="btn btn-outline-secondary rounded-pill px-4">Cancel</a>
+                    <button type="submit" class="btn btn-primary rounded-pill px-5 fw-semibold shadow-sm">
+                        <i class="bi bi-send-fill me-1"></i> Post Doubt
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const titleInput = document.getElementById("doubtTitle");
+    const bodyInput = document.getElementById("doubtBody");
+    const subjectSelect = document.getElementById("doubtSubject");
+    const titleCounter = document.getElementById("titleCounter");
+    const bodyCounter = document.getElementById("bodyCounter");
+
+    const similarBox = document.getElementById("similarDoubtsBox");
+    const similarList = document.getElementById("similarDoubtsList");
+
+    let debounceTimer = null;
+
+    // Character Counter
+    function updateCounters() {
+        if (titleInput && titleCounter) {
+            titleCounter.textContent = titleInput.value.length + "/150";
+        }
+        if (bodyInput && bodyCounter) {
+            bodyCounter.textContent = bodyInput.value.length + "/3000";
+        }
+    }
+
+    // Debounced TF-IDF duplicate detection query
+    function triggerSimilarityCheck() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(function () {
+            const subject = subjectSelect ? subjectSelect.value.trim() : "";
+            const title = titleInput ? titleInput.value.trim() : "";
+            const body = bodyInput ? bodyInput.value.trim() : "";
+
+            if (!subject || title.length < 5) {
+                if (similarBox) similarBox.classList.add("d-none");
+                return;
+            }
+
+            const params = new URLSearchParams({
+                subject: subject,
+                title: title,
+                body: body
+            });
+
+            fetch("/doubts/similar?" + params.toString(), {
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(function (response) {
+                if (!response.ok) throw new Error("Network error");
+                return response.json();
+            })
+            .then(function (data) {
+                if (!similarBox || !similarList) return;
+
+                // Clear previous list
+                while (similarList.firstChild) {
+                    similarList.removeChild(similarList.firstChild);
+                }
+
+                if (data.similar && data.similar.length > 0) {
+                    data.similar.forEach(function (item) {
+                        const row = document.createElement("div");
+                        row.className = "py-2 d-flex justify-content-between align-items-center gap-2 border-bottom";
+
+                        const titleLink = document.createElement("a");
+                        titleLink.href = "/doubts/" + encodeURIComponent(item.id);
+                        titleLink.target = "_blank";
+                        titleLink.rel = "noopener noreferrer";
+                        titleLink.className = "text-decoration-none fw-semibold text-dark text-truncate";
+                        titleLink.textContent = item.title; // Safe textContent DOM insertion
+
+                        const badgeContainer = document.createElement("div");
+                        badgeContainer.className = "d-flex align-items-center gap-1 flex-shrink-0";
+
+                        const scoreBadge = document.createElement("span");
+                        scoreBadge.className = "badge bg-warning text-dark";
+                        scoreBadge.textContent = Math.round(item.score * 100) + "% match";
+
+                        const ansBadge = document.createElement("span");
+                        ansBadge.className = "badge bg-secondary-subtle text-secondary";
+                        ansBadge.textContent = item.answers_count + " ans";
+
+                        badgeContainer.appendChild(scoreBadge);
+                        badgeContainer.appendChild(ansBadge);
+
+                        row.appendChild(titleLink);
+                        row.appendChild(badgeContainer);
+                        similarList.appendChild(row);
+                    });
+
+                    similarBox.classList.remove("d-none");
+                } else {
+                    similarBox.classList.add("d-none");
+                }
+            })
+            .catch(function () {
+                if (similarBox) similarBox.classList.add("d-none");
+            });
+
+        }, 600); // 600 ms debounce requirement
+    }
+
+    if (titleInput) {
+        titleInput.addEventListener("input", function () {
+            updateCounters();
+            triggerSimilarityCheck();
+        });
+    }
+
+    if (bodyInput) {
+        bodyInput.addEventListener("input", function () {
+            updateCounters();
+            triggerSimilarityCheck();
+        });
+    }
+
+    if (subjectSelect) {
+        subjectSelect.addEventListener("change", function () {
+            triggerSimilarityCheck();
+        });
+    }
+
+    updateCounters();
+});
+</script>
+{% endblock %}

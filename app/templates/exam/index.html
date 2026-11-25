@@ -1,0 +1,302 @@
+{% extends "base.html" %}
+
+{% block title %}Exam Mode: {{ selected_subject }} - Collaborative Learning Platform{% endblock %}
+
+{% block extra_head %}
+<style>
+    .topic-progress-bar {
+        height: 10px;
+        border-radius: 5px;
+    }
+    
+    @media print {
+        .navbar,
+        .btn,
+        .btn-group,
+        .no-print,
+        footer,
+        nav,
+        .filter-form-bar {
+            display: none !important;
+        }
+        body {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            font-size: 11pt !important;
+        }
+        .container {
+            max-width: 100% !important;
+            width: 100% !important;
+            padding: 0 !important;
+        }
+        .card {
+            border: 1px solid #dee2e6 !important;
+            box-shadow: none !important;
+            page-break-inside: avoid;
+            margin-bottom: 1.5rem !important;
+        }
+        .print-header {
+            display: block !important;
+        }
+    }
+
+    .print-header {
+        display: none;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Print Only Header -->
+    <div class="print-header mb-4 border-bottom pb-3">
+        <h2 class="fw-bold text-dark mb-1">AI-Powered Collaborative Learning Platform</h2>
+        <h4 class="text-primary mb-0">High-Yield Exam Revision Guide &bull; {{ selected_subject }}</h4>
+        <p class="text-muted small">Generated on {{ data.subject }} &bull; Window: {{ selected_time_range }} days</p>
+    </div>
+
+    <!-- Header & Controls (Screen only) -->
+    <div class="card card-modern border-0 shadow-sm bg-white p-4 mb-4 no-print">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <div>
+                <h2 class="fw-bold mb-1 d-flex align-items-center gap-2">
+                    <i class="bi bi-journal-bookmark-fill text-warning"></i> Exam Mode Revision Guide
+                </h2>
+                <p class="text-muted small mb-0">
+                    High-yield conceptual breakdown, semantic FAQ clusters, and faculty-verified solutions.
+                </p>
+            </div>
+
+            <button type="button" class="btn btn-outline-primary rounded-pill px-4 fw-semibold" onclick="window.print()">
+                <i class="bi bi-printer-fill me-1"></i> Print / Save as PDF
+            </button>
+        </div>
+
+        <!-- Subject & Time Filters -->
+        <form method="GET" action="{{ url_for('exam.index') }}" class="row g-3 align-items-end filter-form-bar">
+            <div class="col-12 col-md-5">
+                <label for="subjectSelect" class="form-label small fw-bold text-dark">Subject Focus</label>
+                <select name="subject" id="subjectSelect" class="form-select form-select-sm" onchange="this.form.submit()">
+                    {% for sub in subjects %}
+                        <option value="{{ sub }}" {% if sub == selected_subject %}selected{% endif %}>{{ sub }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-12 col-md-4">
+                <label for="timeRangeSelect" class="form-label small fw-bold text-dark">Time Horizon</label>
+                <select name="time_range" id="timeRangeSelect" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <option value="30" {% if selected_time_range == '30' %}selected{% endif %}>Last 30 Days (High Relevance)</option>
+                    <option value="90" {% if selected_time_range == '90' %}selected{% endif %}>Last 90 Days (Midterm Horizon)</option>
+                    <option value="all" {% if selected_time_range == 'all' %}selected{% endif %}>All Time (Comprehensive Archive)</option>
+                </select>
+            </div>
+
+            <div class="col-12 col-md-3">
+                <button type="submit" class="btn btn-primary btn-sm rounded-pill w-100 fw-semibold">
+                    <i class="bi bi-funnel me-1"></i> Update Revision Guide
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Section A: Most Asked Topics (TF-IDF) -->
+    <div class="card card-modern border-0 shadow-sm bg-white p-4 mb-4">
+        <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+            <i class="bi bi-bar-chart-line-fill text-primary"></i> Most Queried Topics &amp; Core Concepts
+            <span class="badge bg-primary-subtle text-primary border border-primary-subtle small fw-normal ms-auto">
+                TF-IDF Analytics
+            </span>
+        </h5>
+
+        {% if data.topics %}
+            <p class="text-muted small mb-3">
+                Extracted via Term Frequency-Inverse Document Frequency (TF-IDF) from peer doubts in {{ selected_subject }}.
+            </p>
+            <div class="row g-3">
+                {% for t in data.topics %}
+                <div class="col-12 col-md-6">
+                    <div class="d-flex justify-content-between align-items-center small mb-1">
+                        <span class="fw-semibold text-dark">{{ t.term }}</span>
+                        <span class="text-muted">{{ t.percent }}% frequency</span>
+                    </div>
+                    <div class="progress topic-progress-bar bg-light">
+                        <div class="progress-bar bg-primary" role="progressbar" style="width: {{ t.percent }}%;" aria-valuenow="{{ t.percent }}" aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-4 text-muted small">
+                <i class="bi bi-info-circle fs-4 d-block mb-1 text-secondary"></i>
+                No dominant topics found for {{ selected_subject }} in this time horizon.
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Section B: Frequently Asked Doubts (FAQ Clusters via Cosine Similarity) -->
+    <div class="card card-modern border-0 shadow-sm bg-white p-4 mb-4">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <h5 class="fw-bold text-dark mb-0 d-flex align-items-center gap-2">
+                <i class="bi bi-collection-play-fill text-success"></i> Frequently Asked Doubts (FAQ Clusters)
+            </h5>
+            <span class="badge bg-success-subtle text-success border border-success-subtle small fw-normal">
+                Vector Space Cosine Clustering
+            </span>
+        </div>
+
+        {% if data.faq_clusters %}
+            <p class="text-muted small mb-3">
+                Repeated questions are automatically grouped into clusters. Each cluster highlights the top-ranked answer selected by our Merge Sort algorithm.
+            </p>
+            <div class="d-flex flex-column gap-3">
+                {% for cl in data.faq_clusters %}
+                <div class="p-3 rounded border bg-light bg-opacity-50">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <h6 class="fw-bold text-dark mb-0">
+                            <a href="{{ url_for('doubts.detail', doubt_id=cl.representative_doubt.id) }}" class="text-decoration-none text-dark">
+                                {{ cl.representative_title }}
+                            </a>
+                        </h6>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                                <i class="bi bi-chat-quote-fill me-1"></i> Asked {{ cl.count }} {% if cl.count == 1 %}time{% else %}times{% endif %}
+                            </span>
+                            <span class="badge bg-secondary-subtle text-secondary border">
+                                <i class="bi bi-hand-thumbs-up me-1"></i> {{ cl.total_upvotes }} votes
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Best Answer for Cluster -->
+                    {% if cl.best_answer %}
+                        <div class="p-3 bg-white rounded border border-light shadow-sm mt-2">
+                            <div class="d-flex align-items-center justify-content-between gap-2 mb-1">
+                                <div class="small fw-semibold text-primary">
+                                    <i class="bi bi-award-fill me-1 text-warning"></i> Best Solution
+                                    {% if cl.best_answer.is_verified %}
+                                        <span class="badge bg-success-subtle text-success border border-success-subtle ms-1">
+                                            <i class="bi bi-patch-check-fill me-1"></i> Faculty Verified
+                                        </span>
+                                    {% endif %}
+                                </div>
+                                <span class="badge bg-light text-muted border small">
+                                    {{ cl.best_answer.upvotes }} upvotes
+                                </span>
+                            </div>
+                            <p class="small text-dark mb-0 text-truncate-3" style="white-space: pre-line;">{{ cl.best_answer.body }}</p>
+                        </div>
+                    {% else %}
+                        <p class="small text-muted mb-0 fst-italic">No answers posted for this question cluster yet.</p>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-4 text-muted small">
+                <i class="bi bi-question-circle fs-4 d-block mb-1 text-secondary"></i>
+                No question clusters generated yet. Post a doubt to jumpstart revision!
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Section C: Top Verified and Accepted Answers -->
+    <div class="card card-modern border-0 shadow-sm bg-white p-4 mb-4">
+        <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+            <i class="bi bi-patch-check-fill text-success"></i> Top Verified &amp; Accepted Solutions
+            <span class="badge bg-warning-subtle text-dark border border-warning-subtle small fw-normal ms-auto">
+                Merge-Sort Ranked
+            </span>
+        </h5>
+
+        {% if data.top_answers %}
+            <div class="d-flex flex-column gap-3">
+                {% for item in data.top_answers %}
+                {% set ans = item.answer %}
+                {% set parent_doubt = item.doubt %}
+                <div class="p-3 rounded border bg-white shadow-sm">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <span class="small fw-bold text-secondary">
+                            Question:
+                            <a href="{{ url_for('doubts.detail', doubt_id=parent_doubt.id) }}" class="text-decoration-none text-dark ms-1">
+                                {{ parent_doubt.title }}
+                            </a>
+                            <span class="text-muted fw-normal ms-1">&bull; asked by {{ item.asker_name }}</span>
+                        </span>
+
+                        <div class="d-flex align-items-center gap-1">
+                            {% if item.is_verified %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                    <i class="bi bi-patch-check-fill me-1"></i> Verified
+                                </span>
+                            {% endif %}
+                            {% if item.is_accepted %}
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                    <i class="bi bi-check2-circle me-1"></i> Solution
+                                </span>
+                            {% endif %}
+                            <span class="badge bg-light text-muted border">
+                                <i class="bi bi-hand-thumbs-up me-1"></i> {{ ans.upvotes }}
+                            </span>
+                        </div>
+                    </div>
+                    <p class="small text-dark mb-0" style="white-space: pre-line;">{{ ans.body }}</p>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-4 text-muted small">
+                <i class="bi bi-award fs-4 d-block mb-1 text-secondary"></i>
+                No verified or accepted answers recorded for {{ selected_subject }} yet.
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Section D: Still Unanswered Hot Doubts -->
+    <div class="card card-modern border-0 shadow-sm bg-white p-4">
+        <h5 class="fw-bold text-dark mb-3 d-flex align-items-center gap-2">
+            <i class="bi bi-fire text-danger"></i> Still Unanswered Hot Doubts
+            <span class="badge bg-danger-subtle text-danger border border-danger-subtle small fw-normal ms-auto">
+                Needs Peer Help
+            </span>
+        </h5>
+
+        {% if data.hot_doubts %}
+            <p class="text-muted small mb-3">
+                Open questions with 0 answers or flagged by classmates seeking immediate peer help:
+            </p>
+            <div class="list-group list-group-flush border rounded">
+                {% for hd in data.hot_doubts %}
+                {% set d = hd.doubt %}
+                <a href="{{ url_for('doubts.detail', doubt_id=d.id) }}" class="list-group-item list-group-item-action p-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div>
+                        <h6 class="fw-bold mb-1 text-primary">{{ d.title }}</h6>
+                        <span class="small text-muted">
+                            Asked by {{ hd.asker_name }} &bull; {{ d.created_at.strftime('%b %d, %Y') }}
+                        </span>
+                    </div>
+                    <div>
+                        {% if hd.needs_human %}
+                            <span class="badge bg-danger text-white">
+                                <i class="bi bi-people-fill me-1"></i> Escalated to Classmates
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary">
+                                0 Answers
+                            </span>
+                        {% endif %}
+                    </div>
+                </a>
+                {% endfor %}
+            </div>
+        {% else %}
+            <div class="text-center py-4 text-muted small">
+                <i class="bi bi-check-all fs-4 d-block mb-1 text-success"></i>
+                No unanswered doubts for this subject! Every student query has received an answer.
+            </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}

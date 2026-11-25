@@ -1,0 +1,72 @@
+<!-- Shared Report Message Modal for 1-to-1 and Group Chats -->
+<div class="modal fade" id="reportMessageModal" tabindex="-1" aria-labelledby="reportMessageModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom">
+                <h5 class="modal-title fw-bold text-danger d-flex align-items-center gap-2" id="reportMessageModalLabel">
+                    <i class="bi bi-flag-fill"></i> Report Message
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="reportMessageForm">
+                <div class="modal-body p-4">
+                    <input type="hidden" id="reportModalMessageId" value="">
+                    
+                    <p class="small text-muted mb-3">
+                        Help us maintain a safe and respectful academic environment. Reported messages are sent directly to the faculty review queue.
+                    </p>
+
+                    <!-- Alert message container inside modal -->
+                    <div id="reportModalAlert" class="alert alert-danger small d-none mb-3 py-2" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-dark mb-2">Reason for Report <span class="text-danger">*</span></label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="reportReason" id="reasonAbusive" value="abusive" checked>
+                            <label class="form-check-label small" for="reasonAbusive">
+                                <strong>Abusive / Hateful</strong> &ndash; offensive slurs, hate speech, or hostility
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="reportReason" id="reasonHarassment" value="harassment">
+                            <label class="form-check-label small" for="reasonHarassment">
+                                <strong>Harassment / Bullying</strong> &ndash; persistent targeting or intimidation
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="reportReason" id="reasonSpam" value="spam">
+                            <label class="form-check-label small" for="reasonSpam">
+                                <strong>Spam / Advertising</strong> &ndash; off-topic promotional or nonsensical messages
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="reportReason" id="reasonInappropriate" value="inappropriate">
+                            <label class="form-check-label small" for="reasonInappropriate">
+                                <strong>Inappropriate / Adult</strong> &ndash; sexually explicit or obscene material
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="reportReason" id="reasonOther" value="other">
+                            <label class="form-check-label small" for="reasonOther">
+                                <strong>Other Academic Violation</strong> &ndash; cheating, plagiarism, or exam leaks
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <label for="reportModalNote" class="form-label fw-bold small text-dark">
+                            Additional Context <span class="text-muted fw-normal">(optional, max 200 characters)</span>
+                        </label>
+                        <textarea class="form-control form-control-sm" id="reportModalNote" rows="2" maxlength="200" placeholder="Explain what happened..."></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer border-top bg-light">
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" id="submitReportBtn" class="btn btn-danger btn-sm rounded-pill px-4 fw-semibold">
+                        <i class="bi bi-send-fill me-1"></i> Submit Report
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

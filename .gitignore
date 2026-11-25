@@ -1,0 +1,46 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+
+# Environment variables & secrets
+.env
+
+# Instance & Database files
+instance/
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploaded media & documents (preserve directory structure via .gitkeep)
+uploads/*
+!uploads/.gitkeep
+app/static/uploads/*
+!app/static/uploads/.gitkeep
+
+# Application logs
+logs/*
+!logs/.gitkeep
+*.log
+
+# Test & coverage artifacts
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Operating system artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor settings
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace

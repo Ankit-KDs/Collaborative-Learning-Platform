@@ -1,0 +1,15 @@
+{
+  "venvPath": ".",
+  "venv": "venv",
+  "include": [
+    "app",
+    "tests",
+    "run.py",
+    "test_app.py",
+    "test_e2e.py",
+    "test_stage2_e2e.py"
+  ],
+  "reportMissingTypeStubs": false,
+  "reportIncompatibleMethodOverride": "none",
+  "typeCheckingMode": "standard"
+}

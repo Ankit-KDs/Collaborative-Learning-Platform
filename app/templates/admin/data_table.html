@@ -1,0 +1,156 @@
+{% extends "base.html" %}
+
+{% block title %}Data Browser: {{ table_name }} - CollabLearn Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-lg-4">
+    <!-- Breadcrumb & Header -->
+    <div class="mb-3">
+        <a href="{{ url_for('admin.data_browser') }}" class="text-decoration-none small text-muted">
+            <i class="bi bi-arrow-left me-1"></i> Back to Database Browser
+        </a>
+    </div>
+
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h2 class="h4 fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                <span class="font-monospace text-primary">{{ table_name }}</span>
+                <span class="badge bg-light text-dark border fs-6">{{ total_count }} total records</span>
+            </h2>
+            <p class="text-muted small mb-0">Browse and inspect individual model tuples.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin.export_table', table_name=table_name) }}" class="btn btn-outline-secondary btn-sm rounded-pill">
+                <i class="bi bi-download me-1"></i> Export {{ table_name }}.csv
+            </a>
+        </div>
+    </div>
+
+    {% if table_name == 'messages' and not admin_can_view_chat %}
+    <div class="alert alert-warning border-0 small rounded-3 mb-3 d-flex align-items-center gap-2">
+        <i class="bi bi-eye-slash-fill fs-5"></i>
+        <span>
+            <strong>Chat Privacy Protection Enabled:</strong> Message bodies and attachment image paths are masked with <code>[hidden: privacy]</code>. Enable <code>ADMIN_CAN_VIEW_CHAT_CONTENT=true</code> in your environment to view plaintext contents. Every view is audited.
+        </span>
+    </div>
+    {% endif %}
+
+    <!-- Filter & Search Toolbar -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4">
+        <div class="card-body p-3">
+            <form method="GET" action="{{ url_for('admin.data_table', table_name=table_name) }}" class="row g-2 align-items-center">
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-light border-end-0"><i class="bi bi-search"></i></span>
+                        <input type="text" name="q" class="form-control border-start-0" placeholder="Filter rows in {{ table_name }}..." value="{{ search }}">
+                    </div>
+                </div>
+
+                <div class="col-6 col-md-3 col-lg-2">
+                    <select name="sort" class="form-select form-select-sm">
+                        <option value="">Sort by column</option>
+                        {% for col in columns %}
+                            <option value="{{ col }}" {% if sort_col == col %}selected{% endif %}>{{ col }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-6 col-md-3 col-lg-2">
+                    <select name="dir" class="form-select form-select-sm">
+                        <option value="asc" {% if sort_dir == 'asc' %}selected{% endif %}>Ascending (ASC)</option>
+                        <option value="desc" {% if sort_dir == 'desc' %}selected{% endif %}>Descending (DESC)</option>
+                    </select>
+                </div>
+
+                <div class="col-12 col-lg-4 d-flex justify-content-lg-end gap-2">
+                    <a href="{{ url_for('admin.data_table', table_name=table_name) }}" class="btn btn-outline-secondary btn-sm">Reset</a>
+                    <button type="submit" class="btn btn-primary btn-sm px-3">
+                        <i class="bi bi-filter me-1"></i> Search
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Data Table -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 font-monospace small">
+                <thead class="table-light text-muted small text-uppercase">
+                    <tr>
+                        <th class="ps-4"># Inspect</th>
+                        {% for col in columns %}
+                            <th>{{ col }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if rows %}
+                        {% for row in rows %}
+                        <tr>
+                            <td class="ps-4 font-sans">
+                                {% if 'id' in row and row['id'] is not none %}
+                                    <a href="{{ url_for('admin.data_row', table_name=table_name, row_id=row['id']) }}" class="btn btn-xs btn-outline-primary rounded-pill px-2 py-0" style="font-size: 0.75rem;">
+                                        <i class="bi bi-eye"></i> #{{ row['id'] }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            {% for col in columns %}
+                            <td>
+                                {% set val = row.get(col) %}
+                                {% if val is none %}
+                                    <span class="text-muted fst-italic">NULL</span>
+                                {% elif val == '[hidden: privacy]' %}
+                                    <span class="badge bg-light text-danger border"><i class="bi bi-eye-slash me-1"></i>privacy</span>
+                                {% elif val is string and val | length > 60 %}
+                                    <span title="{{ val }}">{{ val[:60] }}...</span>
+                                {% else %}
+                                    {{ val }}
+                                {% endif %}
+                            </td>
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="{{ columns | length + 1 }}" class="text-center py-5 text-muted font-sans">
+                                <i class="bi bi-inbox fs-1 d-block mb-2 text-secondary"></i>
+                                <h6 class="fw-semibold">No records in {{ table_name }}</h6>
+                                <p class="small mb-0">The query returned zero matching rows.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <div class="card-footer bg-white border-0 py-3 px-4 d-flex justify-content-between align-items-center font-sans">
+            <span class="small text-muted">Page {{ page }} of {{ total_pages }} ({{ total_count }} total rows)</span>
+            <nav aria-label="Table pagination">
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('admin.data_table', table_name=table_name, q=search, sort=sort_col, dir=sort_dir, page=page-1) }}">Previous</a>
+                    </li>
+                    {% for p in range(1, total_pages + 1) %}
+                        {% if p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+                        <li class="page-item {% if p == page %}active{% endif %}">
+                            <a class="page-link" href="{{ url_for('admin.data_table', table_name=table_name, q=search, sort=sort_col, dir=sort_dir, page=p) }}">{{ p }}</a>
+                        </li>
+                        {% elif p == page - 3 or p == page + 3 %}
+                        <li class="page-item disabled"><span class="page-link">...</span></li>
+                        {% endif %}
+                    {% endfor %}
+                    <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                        <a class="page-link" href="{{ url_for('admin.data_table', table_name=table_name, q=search, sort=sort_col, dir=sort_dir, page=page+1) }}">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

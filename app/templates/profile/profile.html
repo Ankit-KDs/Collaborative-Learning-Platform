@@ -1,0 +1,523 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Header Banner -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card card-modern p-4 bg-white border-0 shadow-sm">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div class="d-flex align-items-start gap-3">
+                        <div class="stat-icon {% if user.is_teacher %}stat-icon-green{% else %}stat-icon-blue{% endif %}" style="width: 56px; height: 56px; font-size: 1.8rem; flex-shrink: 0;">
+                            {% if user.is_teacher %}
+                                <i class="bi bi-briefcase-fill"></i>
+                            {% else %}
+                                <i class="bi bi-person-circle"></i>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center flex-wrap gap-2">
+                                <h2 class="fw-bold mb-0 text-dark">{{ user.name }}</h2>
+                                {% if user.is_teacher %}
+                                    <span class="badge bg-success-subtle text-success border border-success px-3 py-1 fw-semibold">Faculty / Teacher</span>
+                                {% else %}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary px-3 py-1 fw-semibold">Student</span>
+                                {% endif %}
+                            </div>
+
+                            <p class="text-muted mb-1 small mt-2">
+                                <i class="bi bi-envelope me-1"></i> {{ user.email }}
+                                {% if user.college_name %}
+                                    &bull; <i class="bi bi-building me-1"></i> {{ user.college_name }}
+                                {% endif %}
+                                {% if user.is_student %}
+                                    {% if user.enrollment_no %}
+                                        &bull; <i class="bi bi-card-heading me-1"></i> Roll: {{ user.enrollment_no }}
+                                    {% endif %}
+                                    &bull; <i class="bi bi-mortarboard me-1"></i> {{ user.academic_summary }}
+                                    {% if user.section %}
+                                        &bull; <i class="bi bi-diagram-3 me-1"></i> Sec {{ user.section }}
+                                    {% endif %}
+                                {% else %}
+                                    {% if user.employee_id %}
+                                        &bull; <i class="bi bi-badge-ad me-1"></i> Emp ID: {{ user.employee_id }}
+                                    {% endif %}
+                                    &bull; <i class="bi bi-award me-1"></i> {{ user.designation }} ({{ user.department }})
+                                    {% if user.qualification %}
+                                        &bull; <i class="bi bi-patch-check me-1"></i> {{ user.qualification }}
+                                    {% endif %}
+                                {% endif %}
+                            </p>
+
+                            {% if user.bio %}
+                            <p class="small text-secondary mb-0 fst-italic">"{{ user.bio }}"</p>
+                            {% endif %}
+
+                            {% if user.is_teacher and user.teaching_subject_list %}
+                            <div class="d-flex flex-wrap gap-1 mt-2 align-items-center">
+                                <span class="small text-muted fw-semibold me-1"><i class="bi bi-journals me-1"></i>Teaching:</span>
+                                {% for s in user.teaching_subject_list %}
+                                    <span class="badge bg-light text-dark border">{{ s }}</span>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if user.is_student %}
+                    <div>
+                        <a href="{{ url_for('matches.matches') }}" class="btn btn-outline-primary rounded-pill px-3 shadow-sm fw-semibold">
+                            <i class="bi bi-people-fill me-1"></i> View Study Buddies
+                        </a>
+                    </div>
+                    {% else %}
+                    <div>
+                        <a href="{{ url_for('moderation.queue') }}" class="btn btn-outline-success rounded-pill px-3 shadow-sm fw-semibold">
+                            <i class="bi bi-shield-check me-1"></i> Moderation Queue
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- STUDENT VIEW -->
+    {% if user.is_student %}
+    <div class="row g-4">
+        <!-- Left: Student Profile Form -->
+        <div class="col-12 col-lg-5">
+            <div class="card card-modern p-4 h-100">
+                <div class="d-flex align-items-center gap-2 mb-3 border-bottom pb-3">
+                    <i class="bi bi-person-lines-fill text-primary fs-5"></i>
+                    <h5 class="fw-bold mb-0">Academic Profile</h5>
+                </div>
+
+                <form method="POST" action="{{ url_for('profile.profile') }}" novalidate>
+                    {{ student_profile_form.hidden_tag() }}
+
+                    <!-- Full Name -->
+                    <div class="mb-3">
+                        {{ student_profile_form.name.label(class="form-label small fw-semibold") }}
+                        {{ student_profile_form.name(class="form-control" + (" is-invalid" if student_profile_form.name.errors else "")) }}
+                        {% for err in student_profile_form.name.errors %}
+                            <div class="invalid-feedback small">{{ err }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Email (Read-Only) -->
+                    <div class="mb-3">
+                        {{ student_profile_form.email.label(class="form-label small fw-semibold") }}
+                        {{ student_profile_form.email(class="form-control bg-light text-muted") }}
+                        <div class="form-text small text-muted">College email cannot be changed once registered.</div>
+                    </div>
+
+                    <!-- College Name -->
+                    <div class="mb-3">
+                        {{ student_profile_form.college_name.label(class="form-label small fw-semibold") }}
+                        {{ student_profile_form.college_name(class="form-control" + (" is-invalid" if student_profile_form.college_name.errors else "")) }}
+                        {% for err in student_profile_form.college_name.errors %}
+                            <div class="invalid-feedback small">{{ err }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Enrollment No -->
+                    <div class="mb-3">
+                        {{ student_profile_form.enrollment_no.label(class="form-label small fw-semibold") }}
+                        {{ student_profile_form.enrollment_no(class="form-control" + (" is-invalid" if student_profile_form.enrollment_no.errors else "")) }}
+                        {% for err in student_profile_form.enrollment_no.errors %}
+                            <div class="invalid-feedback small">{{ err }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Program & Specialization -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            {{ student_profile_form.program.label(class="form-label small fw-semibold") }}
+                            {{ student_profile_form.program(class="form-select", id="student-program-select") }}
+                        </div>
+                        <div class="col-6">
+                            {{ student_profile_form.specialization.label(class="form-label small fw-semibold") }}
+                            {{ student_profile_form.specialization(class="form-select", id="student-spec-select") }}
+                        </div>
+                    </div>
+
+                    <!-- Year & Semester -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            {{ student_profile_form.year.label(class="form-label small fw-semibold") }}
+                            {{ student_profile_form.year(class="form-select", id="student-year-select") }}
+                        </div>
+                        <div class="col-6">
+                            {{ student_profile_form.semester.label(class="form-label small fw-semibold") }}
+                            {{ student_profile_form.semester(class="form-select", id="student-sem-select") }}
+                        </div>
+                    </div>
+
+                    <!-- Section & Bio -->
+                    <div class="mb-3">
+                        {{ student_profile_form.section.label(class="form-label small fw-semibold") }}
+                        {{ student_profile_form.section(class="form-control" + (" is-invalid" if student_profile_form.section.errors else "")) }}
+                    </div>
+
+                    <div class="mb-4">
+                        {{ student_profile_form.bio.label(class="form-label small fw-semibold") }}
+                        {{ student_profile_form.bio(class="form-control" + (" is-invalid" if student_profile_form.bio.errors else ""), rows=2) }}
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" name="student_profile-submit" class="btn btn-primary rounded-3 fw-semibold">
+                            <i class="bi bi-check2-circle me-1"></i> Save Academic Profile
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right: Subject Skills (Students Only) -->
+        <div class="col-12 col-lg-7">
+            <!-- Add or Update Skill Card -->
+            <div class="card card-modern p-4 mb-4">
+                <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-mortarboard-fill text-primary fs-5"></i>
+                        <h5 class="fw-bold mb-0">Set Subject Skill Level</h5>
+                    </div>
+                    <span class="badge bg-light text-muted border">Matching Foundation</span>
+                </div>
+                <p class="text-muted small mb-3">
+                    Select your self-assessed proficiency. The platform pairs subjects where you are <strong>Weak</strong> with peers who excel (<strong>Strong</strong>).
+                </p>
+
+                <form method="POST" action="{{ url_for('profile.profile') }}" novalidate>
+                    {{ skill_form.hidden_tag() }}
+
+                    <div class="row g-3">
+                        <div class="col-12 col-sm-6">
+                            {{ skill_form.subject.label(class="form-label") }}
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted"><i class="bi bi-book"></i></span>
+                                {% if skill_form.subject.errors %}
+                                    {{ skill_form.subject(class="form-select is-invalid") }}
+                                {% else %}
+                                    {{ skill_form.subject(class="form-select") }}
+                                {% endif %}
+                            </div>
+                            {% for error in skill_form.subject.errors %}
+                                <div class="invalid-feedback d-block small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-12 col-sm-6">
+                            {{ skill_form.level.label(class="form-label") }}
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-muted"><i class="bi bi-bar-chart"></i></span>
+                                {% if skill_form.level.errors %}
+                                    {{ skill_form.level(class="form-select is-invalid") }}
+                                {% else %}
+                                    {{ skill_form.level(class="form-select") }}
+                                {% endif %}
+                            </div>
+                            {% for error in skill_form.level.errors %}
+                                <div class="invalid-feedback d-block small mt-1">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="col-12">
+                            <button type="submit" name="skill-submit" class="btn btn-outline-primary rounded-3 fw-semibold w-100">
+                                <i class="bi bi-plus-circle me-1"></i> Save Skill Level
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Current Skills Table Card -->
+            <div class="card card-modern p-4">
+                <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-list-check text-primary fs-5"></i>
+                        <h5 class="fw-bold mb-0">Current Subject Skills</h5>
+                    </div>
+                    <span class="badge bg-secondary-subtle text-secondary border">
+                        {{ user_skills|length }} {{ 'Subject' if user_skills|length == 1 else 'Subjects' }}
+                    </span>
+                </div>
+
+                {% if user_skills %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th scope="col" class="small fw-bold text-uppercase text-muted">Subject</th>
+                                <th scope="col" class="small fw-bold text-uppercase text-muted text-center">Proficiency</th>
+                                <th scope="col" class="small fw-bold text-uppercase text-muted text-end">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for skill in user_skills %}
+                            <tr>
+                                <td class="fw-semibold">
+                                    <i class="bi bi-journal-code text-primary me-2"></i> {{ skill.subject }}
+                                </td>
+                                <td class="text-center">
+                                    {% if skill.level == 'Weak' %}
+                                        <span class="badge bg-danger px-3 py-1">Weak</span>
+                                    {% elif skill.level == 'Average' %}
+                                        <span class="badge bg-warning text-dark px-3 py-1">Average</span>
+                                    {% elif skill.level == 'Strong' %}
+                                        <span class="badge bg-success px-3 py-1">Strong</span>
+                                    {% else %}
+                                        <span class="badge bg-secondary px-3 py-1">{{ skill.level }}</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end">
+                                    <form method="POST" action="{{ url_for('profile.delete_skill', skill_id=skill.id) }}" class="d-inline" onsubmit="return confirm('Remove skill for {{ skill.subject }}?');">
+                                        {{ delete_form.hidden_tag() }}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-pill px-3" title="Delete skill">
+                                            <i class="bi bi-trash3 me-1"></i> Remove
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-4 bg-light rounded-3">
+                    <div class="stat-icon stat-icon-amber mx-auto mb-2" style="width: 44px; height: 44px; font-size: 1.3rem;">
+                        <i class="bi bi-lightning-charge"></i>
+                    </div>
+                    <h6 class="fw-bold mb-1">No skills added yet</h6>
+                    <p class="text-muted small mb-0">Use the form above to rate your subjects so we can find study partners for you.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- TEACHER VIEW -->
+    {% else %}
+    <div class="row g-4">
+        <!-- Left: Teacher Profile Form -->
+        <div class="col-12 col-lg-7">
+            <div class="card card-modern p-4 h-100">
+                <div class="d-flex align-items-center gap-2 mb-3 border-bottom pb-3">
+                    <i class="bi bi-briefcase text-success fs-5"></i>
+                    <h5 class="fw-bold mb-0">Faculty Professional Information</h5>
+                </div>
+
+                <form method="POST" action="{{ url_for('profile.profile') }}" novalidate>
+                    {{ teacher_profile_form.hidden_tag() }}
+
+                    <!-- Full Name -->
+                    <div class="mb-3">
+                        {{ teacher_profile_form.name.label(class="form-label small fw-semibold") }}
+                        {{ teacher_profile_form.name(class="form-control" + (" is-invalid" if teacher_profile_form.name.errors else "")) }}
+                        {% for err in teacher_profile_form.name.errors %}
+                            <div class="invalid-feedback small">{{ err }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Email (Read-Only) -->
+                    <div class="mb-3">
+                        {{ teacher_profile_form.email.label(class="form-label small fw-semibold") }}
+                        {{ teacher_profile_form.email(class="form-control bg-light text-muted") }}
+                        <div class="form-text small text-muted">Official college email cannot be modified.</div>
+                    </div>
+
+                    <!-- College Name -->
+                    <div class="mb-3">
+                        {{ teacher_profile_form.college_name.label(class="form-label small fw-semibold") }}
+                        {{ teacher_profile_form.college_name(class="form-control" + (" is-invalid" if teacher_profile_form.college_name.errors else "")) }}
+                        {% for err in teacher_profile_form.college_name.errors %}
+                            <div class="invalid-feedback small">{{ err }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Employee ID -->
+                    <div class="mb-3">
+                        {{ teacher_profile_form.employee_id.label(class="form-label small fw-semibold") }}
+                        {{ teacher_profile_form.employee_id(class="form-control" + (" is-invalid" if teacher_profile_form.employee_id.errors else "")) }}
+                        {% for err in teacher_profile_form.employee_id.errors %}
+                            <div class="invalid-feedback small">{{ err }}</div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Department & Designation -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            {{ teacher_profile_form.department.label(class="form-label small fw-semibold") }}
+                            {{ teacher_profile_form.department(class="form-select") }}
+                        </div>
+                        <div class="col-6">
+                            {{ teacher_profile_form.designation.label(class="form-label small fw-semibold") }}
+                            {{ teacher_profile_form.designation(class="form-select") }}
+                        </div>
+                    </div>
+
+                    <!-- Qualification & Experience -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-6">
+                            {{ teacher_profile_form.qualification.label(class="form-label small fw-semibold") }}
+                            {{ teacher_profile_form.qualification(class="form-select") }}
+                        </div>
+                        <div class="col-6">
+                            {{ teacher_profile_form.experience_years.label(class="form-label small fw-semibold") }}
+                            {{ teacher_profile_form.experience_years(class="form-control" + (" is-invalid" if teacher_profile_form.experience_years.errors else "")) }}
+                        </div>
+                    </div>
+
+                    <!-- Teaching Subjects -->
+                    <div class="mb-3">
+                        {{ teacher_profile_form.subjects.label(class="form-label small fw-semibold") }}
+                        <div class="border rounded-3 p-3 bg-light" style="max-height: 180px; overflow-y: auto;">
+                            <div class="row row-cols-1 row-cols-sm-2 g-2">
+                                {% for val, label in teacher_profile_form.subjects.choices %}
+                                <div class="col">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="teacher_profile-subjects" value="{{ val }}" id="prof-subj-{{ loop.index }}" {% if val in teacher_profile_form.subjects.data %}checked{% endif %}>
+                                        <label class="form-check-label small" for="prof-subj-{{ loop.index }}">
+                                            {{ label }}
+                                        </label>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        {% for err in teacher_profile_form.subjects.errors %}
+                            <div class="invalid-feedback d-block small">{{ err }}</div>
+                        {% endfor %}
+                        <div class="form-text small text-muted">Select all curriculum subjects you guide or verify answers for.</div>
+                    </div>
+
+                    <!-- Bio -->
+                    <div class="mb-4">
+                        {{ teacher_profile_form.bio.label(class="form-label small fw-semibold") }}
+                        {{ teacher_profile_form.bio(class="form-control" + (" is-invalid" if teacher_profile_form.bio.errors else ""), rows=2) }}
+                    </div>
+
+                    <div class="d-grid">
+                        <button type="submit" name="teacher_profile-submit" class="btn btn-success rounded-3 fw-semibold">
+                            <i class="bi bi-check2-circle me-1"></i> Save Faculty Profile
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Right: Faculty Guidance Overview -->
+        <div class="col-12 col-lg-5">
+            <div class="card card-modern p-4 mb-4">
+                <div class="d-flex align-items-center gap-2 mb-3 border-bottom pb-3">
+                    <i class="bi bi-mortarboard-fill text-success fs-5"></i>
+                    <h5 class="fw-bold mb-0">Assigned Teaching Subjects</h5>
+                </div>
+                <p class="text-muted small mb-3">
+                    Doubts posted by students in your assigned subjects are automatically highlighted on your faculty dashboard for prompt verification and assistance.
+                </p>
+                <div class="d-flex flex-wrap gap-2 mb-4">
+                    {% for subj in user.teaching_subject_list %}
+                        <span class="badge bg-success-subtle text-success border border-success px-3 py-2 fs-6">
+                            <i class="bi bi-journal-bookmark me-1"></i> {{ subj }}
+                        </span>
+                    {% else %}
+                        <span class="text-muted small fst-italic">No subjects selected yet.</span>
+                    {% endfor %}
+                </div>
+
+                <div class="border-top pt-3">
+                    <h6 class="fw-bold text-dark mb-2"><i class="bi bi-shield-check text-success me-1"></i> Faculty Privileges</h6>
+                    <ul class="list-unstyled small text-muted mb-0">
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Verified Answers:</strong> Teachers can review student answers and grant an official faculty verification checkmark.</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Content Moderation:</strong> Review auto-flagged chat messages or doubts in the moderation queue.</li>
+                        <li class="mb-2"><i class="bi bi-check-circle-fill text-success me-2"></i><strong>Curriculum Analytics:</strong> Access subject-level doubt volume metrics and student top helper leaderboards.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+{% if user.is_student %}
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    const programsData = {{ programs_json|safe }};
+    const programSelect = document.getElementById("student-program-select");
+    const specSelect = document.getElementById("student-spec-select");
+    const yearSelect = document.getElementById("student-year-select");
+    const semSelect = document.getElementById("student-sem-select");
+
+    const currentSpec = {{ (user.specialization or user.branch or '')|tojson }};
+    const currentYear = {{ (user.year or 1)|tojson }};
+    const currentSem = {{ (user.semester or 1)|tojson }};
+
+    function updateStudentFormFields(preserveValues) {
+        const pKey = programSelect.value;
+        const pInfo = programsData[pKey];
+        if (!pInfo) return;
+
+        const selSpec = preserveValues ? specSelect.value || currentSpec : "";
+        const selYear = preserveValues ? parseInt(yearSelect.value) || currentYear : 1;
+        const selSem = preserveValues ? parseInt(semSelect.value) || currentSem : 1;
+
+        // Populate Specializations
+        specSelect.innerHTML = "";
+        pInfo.specializations.forEach(function(sp) {
+            const opt = document.createElement("option");
+            opt.value = sp;
+            opt.textContent = sp;
+            if (sp === selSpec) opt.selected = true;
+            specSelect.appendChild(opt);
+        });
+
+        // Populate Years (1..N)
+        yearSelect.innerHTML = "";
+        for (let y = 1; y <= pInfo.years; y++) {
+            const opt = document.createElement("option");
+            opt.value = y;
+            opt.textContent = "Year " + y;
+            if (y === selYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+
+        // Populate Semesters (1..totalSemesters) constrained by selected Year
+        updateSemestersForYear(pInfo, selSem);
+    }
+
+    function updateSemestersForYear(pInfo, targetSem) {
+        const y = parseInt(yearSelect.value) || 1;
+        const startSem = (y - 1) * 2 + 1;
+        const endSem = Math.min(y * 2, pInfo.semesters);
+
+        semSelect.innerHTML = "";
+        for (let s = startSem; s <= endSem; s++) {
+            const opt = document.createElement("option");
+            opt.value = s;
+            opt.textContent = "Semester " + s;
+            if (s === targetSem) opt.selected = true;
+            semSelect.appendChild(opt);
+        }
+    }
+
+    programSelect.addEventListener("change", function() {
+        updateStudentFormFields(false);
+    });
+
+    yearSelect.addEventListener("change", function() {
+        const pInfo = programsData[programSelect.value];
+        if (pInfo) {
+            updateSemestersForYear(pInfo, null);
+        }
+    });
+
+    // Initial load sync
+    updateStudentFormFields(true);
+});
+</script>
+{% endif %}
+
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-8 col-lg-6">
+            <div class="card card-modern p-4 p-md-5 bg-white border-0 shadow-sm">
+
+                <!-- Header -->
+                <div class="text-center mb-4">
+                    <div class="stat-icon stat-icon-blue mx-auto mb-3" style="width: 54px; height: 54px; font-size: 1.6rem;">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <h3 class="fw-bold mb-1 text-dark">Create a Study Group</h3>
+                    <p class="text-muted small mb-0">
+                        Form a cohort of 3 to 5 students focused on mastering a specific subject together.
+                    </p>
+                </div>
+
+                <!-- Form -->
+                <form method="POST" action="{{ url_for('groups.create') }}">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label for="{{ form.name.id }}" class="form-label fw-semibold small text-dark">
+                            {{ form.name.label.text }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.name(class="form-control form-control-modern" + (" is-invalid" if form.name.errors else "")) }}
+                        {% if form.name.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.name.errors %}
+                                    <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                        <div class="form-text small">Between 3 and 50 characters.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label for="{{ form.subject.id }}" class="form-label fw-semibold small text-dark">
+                            {{ form.subject.label.text }} <span class="text-danger">*</span>
+                        </label>
+                        {{ form.subject(class="form-select form-control-modern" + (" is-invalid" if form.subject.errors else "")) }}
+                        {% if form.subject.errors %}
+                            <div class="invalid-feedback">
+                                {% for error in form.subject.errors %}
+                                    <span>{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="alert alert-info border-0 rounded-3 small mb-4 d-flex align-items-start gap-2">
+                        <i class="bi bi-info-circle-fill text-info fs-5"></i>
+                        <div>
+                            <strong>Cohort Guidelines:</strong> As group creator, you will be the group administrator. You will be able to invite peers, view balanced recommendation suggestions (Weak, Average, Strong), and manage membership up to a cap of 5 students.
+                        </div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        {{ form.submit(class="btn btn-primary rounded-pill py-2 fw-semibold shadow-sm") }}
+                        <a href="{{ url_for('groups.index') }}" class="btn btn-outline-secondary rounded-pill py-2 fw-semibold">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

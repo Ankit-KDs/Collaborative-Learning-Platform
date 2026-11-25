@@ -1,0 +1,461 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-12 col-md-11 col-lg-8">
+            <div class="card auth-card shadow-sm border-0 bg-white">
+                <div class="card-body p-4 p-md-5">
+
+                    <div class="text-center mb-4">
+                        <div class="brand-icon-box bg-primary text-white mx-auto mb-3" style="width: 52px; height: 52px; font-size: 1.6rem;">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </div>
+                        <h2 class="fw-bold mb-1">Create an Account</h2>
+                        <p class="text-muted small">Select your academic role to join your college learning platform</p>
+                    </div>
+
+                    <!-- Role Selection Cards -->
+                    <div class="row g-3 mb-4" id="roleSelectorCards">
+                        <div class="col-6">
+                            <div class="card h-100 p-3 text-center cursor-pointer border-2 transition-all {{ 'border-primary bg-primary-subtle bg-opacity-25' if active_role == 'student' else 'border-light-subtle bg-light' }}" id="roleCardStudent" onclick="switchRole('student')" style="cursor: pointer;">
+                                <div class="stat-icon stat-icon-blue mx-auto mb-2" style="width: 44px; height: 44px; font-size: 1.25rem;">
+                                    <i class="bi bi-person-badge"></i>
+                                </div>
+                                <h6 class="fw-bold mb-1 text-dark">Student</h6>
+                                <p class="text-muted small mb-0 d-none d-sm-block">Peer matching, study groups, doubts &amp; AI quizzes</p>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="card h-100 p-3 text-center cursor-pointer border-2 transition-all {{ 'border-success bg-success-subtle bg-opacity-25' if active_role == 'teacher' else 'border-light-subtle bg-light' }}" id="roleCardTeacher" onclick="switchRole('teacher')" style="cursor: pointer;">
+                                <div class="stat-icon stat-icon-emerald mx-auto mb-2" style="width: 44px; height: 44px; font-size: 1.25rem;">
+                                    <i class="bi bi-briefcase-fill"></i>
+                                </div>
+                                <h6 class="fw-bold mb-1 text-dark">Faculty / Teacher</h6>
+                                <p class="text-muted small mb-0 d-none d-sm-block">Verify solutions, review moderation &amp; view analytics</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Student Registration Form -->
+                    <div id="studentFormContainer" class="{{ 'd-none' if active_role != 'student' else '' }}">
+                        <form method="POST" action="{{ url_for('auth.register') }}" novalidate id="studentRegistrationForm">
+                            <input type="hidden" name="role_type" value="student">
+                            {{ student_form.hidden_tag() }}
+
+                            <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                                <i class="bi bi-person-lines-fill text-primary me-2"></i> Student Details
+                            </h5>
+
+                            <!-- Name & Email -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    {{ student_form.name.label(class="form-label") }}
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light text-muted"><i class="bi bi-person"></i></span>
+                                        {{ student_form.name(class="form-control" + (" is-invalid" if student_form.name.errors else "")) }}
+                                    </div>
+                                    {% for err in student_form.name.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    {{ student_form.email.label(class="form-label") }}
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light text-muted"><i class="bi bi-envelope"></i></span>
+                                        {{ student_form.email(class="form-control" + (" is-invalid" if student_form.email.errors else "")) }}
+                                    </div>
+                                    {% for err in student_form.email.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- College & Enrollment Number -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-7">
+                                    {{ student_form.college_name.label(class="form-label") }}
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light text-muted"><i class="bi bi-building"></i></span>
+                                        {{ student_form.college_name(class="form-control" + (" is-invalid" if student_form.college_name.errors else "")) }}
+                                    </div>
+                                    {% for err in student_form.college_name.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 col-md-5">
+                                    {{ student_form.enrollment_no.label(class="form-label") }}
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light text-muted"><i class="bi bi-card-text"></i></span>
+                                        {{ student_form.enrollment_no(class="form-control" + (" is-invalid" if student_form.enrollment_no.errors else "")) }}
+                                    </div>
+                                    {% for err in student_form.enrollment_no.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <h5 class="fw-bold text-dark border-bottom pb-2 mb-3 mt-4">
+                                <i class="bi bi-mortarboard text-primary me-2"></i> Academic Curriculum
+                            </h5>
+
+                            <!-- Program & Specialization -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    {{ student_form.program.label(class="form-label") }}
+                                    {{ student_form.program(class="form-select" + (" is-invalid" if student_form.program.errors else ""), id="studentProgramSelect") }}
+                                    {% for err in student_form.program.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    {{ student_form.specialization.label(class="form-label") }}
+                                    {{ student_form.specialization(class="form-select" + (" is-invalid" if student_form.specialization.errors else ""), id="studentSpecializationSelect") }}
+                                    {% for err in student_form.specialization.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Year, Semester, Section -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-4">
+                                    {{ student_form.year.label(class="form-label") }}
+                                    {{ student_form.year(class="form-select" + (" is-invalid" if student_form.year.errors else ""), id="studentYearSelect") }}
+                                    {% for err in student_form.year.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    {{ student_form.semester.label(class="form-label") }}
+                                    {{ student_form.semester(class="form-select" + (" is-invalid" if student_form.semester.errors else ""), id="studentSemesterSelect") }}
+                                    {% for err in student_form.semester.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    {{ student_form.section.label(class="form-label") }}
+                                    {{ student_form.section(class="form-control" + (" is-invalid" if student_form.section.errors else "")) }}
+                                    {% for err in student_form.section.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Bio -->
+                            <div class="mb-3">
+                                {{ student_form.bio.label(class="form-label") }}
+                                {{ student_form.bio(class="form-control" + (" is-invalid" if student_form.bio.errors else "")) }}
+                                <div class="form-text small text-muted">Brief overview of your academic focus or technical interests (max 200 chars).</div>
+                                {% for err in student_form.bio.errors %}
+                                    <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <h5 class="fw-bold text-dark border-bottom pb-2 mb-3 mt-4">
+                                <i class="bi bi-shield-lock text-primary me-2"></i> Account Security
+                            </h5>
+
+                            <!-- Password & Confirm -->
+                            <div class="row g-3 mb-4">
+                                <div class="col-12 col-md-6">
+                                    {{ student_form.password.label(class="form-label") }}
+                                    {{ student_form.password(class="form-control" + (" is-invalid" if student_form.password.errors else "")) }}
+                                    <div class="form-text small text-muted">Minimum 8 characters, at least 1 letter and 1 digit.</div>
+                                    {% for err in student_form.password.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    {{ student_form.confirm_password.label(class="form-label") }}
+                                    {{ student_form.confirm_password(class="form-control" + (" is-invalid" if student_form.confirm_password.errors else "")) }}
+                                    {% for err in student_form.confirm_password.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div class="d-grid mt-4">
+                                {{ student_form.submit(class="btn btn-primary btn-lg rounded-pill fw-semibold shadow-sm") }}
+                            </div>
+                        </form>
+                    </div>
+
+                    <!-- Teacher / Faculty Registration Form -->
+                    <div id="teacherFormContainer" class="{{ 'd-none' if active_role != 'teacher' else '' }}">
+                        <form method="POST" action="{{ url_for('auth.register') }}" novalidate id="teacherRegistrationForm">
+                            <input type="hidden" name="role_type" value="teacher">
+                            {{ teacher_form.hidden_tag() }}
+
+                            <div class="alert alert-info border-info-subtle d-flex align-items-center gap-2 mb-4" role="alert">
+                                <i class="bi bi-info-circle-fill fs-5"></i>
+                                <div class="small">
+                                    Faculty registration requires a valid <strong>Teacher Invite Code</strong> provided by your institution or department coordinator.
+                                </div>
+                            </div>
+
+                            <h5 class="fw-bold text-dark border-bottom pb-2 mb-3">
+                                <i class="bi bi-person-workspace text-success me-2"></i> Faculty Profile
+                            </h5>
+
+                            <!-- Name & Official Email -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-6">
+                                    {{ teacher_form.name.label(class="form-label") }}
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light text-muted"><i class="bi bi-person"></i></span>
+                                        {{ teacher_form.name(class="form-control" + (" is-invalid" if teacher_form.name.errors else "")) }}
+                                    </div>
+                                    {% for err in teacher_form.name.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    {{ teacher_form.email.label(class="form-label") }}
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light text-muted"><i class="bi bi-envelope"></i></span>
+                                        {{ teacher_form.email(class="form-control" + (" is-invalid" if teacher_form.email.errors else "")) }}
+                                    </div>
+                                    {% for err in teacher_form.email.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- College & Employee ID -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-7">
+                                    {{ teacher_form.college_name.label(class="form-label") }}
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light text-muted"><i class="bi bi-building"></i></span>
+                                        {{ teacher_form.college_name(class="form-control" + (" is-invalid" if teacher_form.college_name.errors else "")) }}
+                                    </div>
+                                    {% for err in teacher_form.college_name.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 col-md-5">
+                                    {{ teacher_form.employee_id.label(class="form-label") }}
+                                    <div class="input-group">
+                                        <span class="input-group-text bg-light text-muted"><i class="bi bi-card-heading"></i></span>
+                                        {{ teacher_form.employee_id(class="form-control" + (" is-invalid" if teacher_form.employee_id.errors else "")) }}
+                                    </div>
+                                    {% for err in teacher_form.employee_id.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <h5 class="fw-bold text-dark border-bottom pb-2 mb-3 mt-4">
+                                <i class="bi bi-diagram-3 text-success me-2"></i> Departmental &amp; Academic Role
+                            </h5>
+
+                            <!-- Department, Designation, Qualification -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-4">
+                                    {{ teacher_form.department.label(class="form-label") }}
+                                    {{ teacher_form.department(class="form-select" + (" is-invalid" if teacher_form.department.errors else "")) }}
+                                    {% for err in teacher_form.department.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    {{ teacher_form.designation.label(class="form-label") }}
+                                    {{ teacher_form.designation(class="form-select" + (" is-invalid" if teacher_form.designation.errors else "")) }}
+                                    {% for err in teacher_form.designation.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 col-md-4">
+                                    {{ teacher_form.qualification.label(class="form-label") }}
+                                    {{ teacher_form.qualification(class="form-select" + (" is-invalid" if teacher_form.qualification.errors else "")) }}
+                                    {% for err in teacher_form.qualification.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Experience & Teaching Subjects -->
+                            <div class="row g-3 mb-3">
+                                <div class="col-12 col-md-4">
+                                    {{ teacher_form.experience_years.label(class="form-label") }}
+                                    {{ teacher_form.experience_years(class="form-control" + (" is-invalid" if teacher_form.experience_years.errors else "")) }}
+                                    {% for err in teacher_form.experience_years.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 col-md-8">
+                                    {{ teacher_form.subjects.label(class="form-label") }}
+                                    {{ teacher_form.subjects(class="form-select" + (" is-invalid" if teacher_form.subjects.errors else ""), size=4, multiple=True) }}
+                                    <div class="form-text small text-muted">Hold Ctrl (Windows) or Cmd (Mac) to select multiple subjects.</div>
+                                    {% for err in teacher_form.subjects.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Invite Code (Faculty Gate) -->
+                            <div class="mb-3">
+                                {{ teacher_form.invite_code.label(class="form-label") }}
+                                <div class="input-group">
+                                    <span class="input-group-text bg-light text-muted"><i class="bi bi-key-fill text-warning"></i></span>
+                                    {{ teacher_form.invite_code(class="form-control" + (" is-invalid" if teacher_form.invite_code.errors else "")) }}
+                                </div>
+                                <div class="form-text small text-muted">Contact your college IT or academic dean if you do not have this code.</div>
+                                {% for err in teacher_form.invite_code.errors %}
+                                    <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <!-- Bio -->
+                            <div class="mb-3">
+                                {{ teacher_form.bio.label(class="form-label") }}
+                                {{ teacher_form.bio(class="form-control" + (" is-invalid" if teacher_form.bio.errors else "")) }}
+                                {% for err in teacher_form.bio.errors %}
+                                    <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                {% endfor %}
+                            </div>
+
+                            <h5 class="fw-bold text-dark border-bottom pb-2 mb-3 mt-4">
+                                <i class="bi bi-shield-lock text-success me-2"></i> Account Security
+                            </h5>
+
+                            <!-- Password & Confirm -->
+                            <div class="row g-3 mb-4">
+                                <div class="col-12 col-md-6">
+                                    {{ teacher_form.password.label(class="form-label") }}
+                                    {{ teacher_form.password(class="form-control" + (" is-invalid" if teacher_form.password.errors else "")) }}
+                                    <div class="form-text small text-muted">Minimum 8 characters, at least 1 letter and 1 digit.</div>
+                                    {% for err in teacher_form.password.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    {{ teacher_form.confirm_password.label(class="form-label") }}
+                                    {{ teacher_form.confirm_password(class="form-control" + (" is-invalid" if teacher_form.confirm_password.errors else "")) }}
+                                    {% for err in teacher_form.confirm_password.errors %}
+                                        <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <div class="d-grid mt-4">
+                                {{ teacher_form.submit(class="btn btn-success btn-lg rounded-pill fw-semibold shadow-sm") }}
+                            </div>
+                        </form>
+                    </div>
+
+                    <div class="text-center mt-4 pt-3 border-top">
+                        <span class="text-muted small">Already have an account?</span>
+                        <a href="{{ url_for('auth.login') }}" class="small fw-semibold text-primary text-decoration-none ms-1">
+                            Sign In here &rarr;
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Dynamic Programs, Specializations, Years, and Semesters
+const PROGRAMS_CONFIG = {{ programs_json | safe }};
+
+function switchRole(role) {
+    const studentCard = document.getElementById('roleCardStudent');
+    const teacherCard = document.getElementById('roleCardTeacher');
+    const studentContainer = document.getElementById('studentFormContainer');
+    const teacherContainer = document.getElementById('teacherFormContainer');
+
+    if (role === 'teacher') {
+        studentCard.className = 'card h-100 p-3 text-center cursor-pointer border-2 transition-all border-light-subtle bg-light';
+        teacherCard.className = 'card h-100 p-3 text-center cursor-pointer border-2 transition-all border-success bg-success-subtle bg-opacity-25';
+        studentContainer.classList.add('d-none');
+        teacherContainer.classList.remove('d-none');
+    } else {
+        studentCard.className = 'card h-100 p-3 text-center cursor-pointer border-2 transition-all border-primary bg-primary-subtle bg-opacity-25';
+        teacherCard.className = 'card h-100 p-3 text-center cursor-pointer border-2 transition-all border-light-subtle bg-light';
+        studentContainer.classList.remove('d-none');
+        teacherContainer.classList.add('d-none');
+    }
+}
+
+function updateStudentCurriculumDropdowns() {
+    const programSelect = document.getElementById('studentProgramSelect');
+    const specSelect = document.getElementById('studentSpecializationSelect');
+    const yearSelect = document.getElementById('studentYearSelect');
+    const semSelect = document.getElementById('studentSemesterSelect');
+
+    if (!programSelect || !specSelect || !yearSelect || !semSelect) return;
+
+    const progKey = programSelect.value;
+    const progData = PROGRAMS_CONFIG[progKey] || PROGRAMS_CONFIG['B.Tech'];
+
+    // 1. Update Specializations
+    const currentSpec = specSelect.value;
+    specSelect.innerHTML = '';
+    (progData.specializations || []).forEach(spec => {
+        const opt = document.createElement('option');
+        opt.value = spec;
+        opt.textContent = spec;
+        if (spec === currentSpec) opt.selected = true;
+        specSelect.appendChild(opt);
+    });
+
+    // 2. Update Years
+    const currentYear = parseInt(yearSelect.value) || 1;
+    yearSelect.innerHTML = '';
+    for (let y = 1; y <= progData.years; y++) {
+        const opt = document.createElement('option');
+        opt.value = y;
+        opt.textContent = `Year ${y}`;
+        if (y === currentYear || (currentYear > progData.years && y === 1)) opt.selected = true;
+        yearSelect.appendChild(opt);
+    }
+
+    // 3. Update Semesters based on chosen year
+    updateSemesterOptions();
+}
+
+function updateSemesterOptions() {
+    const programSelect = document.getElementById('studentProgramSelect');
+    const yearSelect = document.getElementById('studentYearSelect');
+    const semSelect = document.getElementById('studentSemesterSelect');
+
+    if (!programSelect || !yearSelect || !semSelect) return;
+
+    const progKey = programSelect.value;
+    const progData = PROGRAMS_CONFIG[progKey] || PROGRAMS_CONFIG['B.Tech'];
+    const chosenYear = parseInt(yearSelect.value) || 1;
+
+    const sem1 = 2 * chosenYear - 1;
+    const sem2 = 2 * chosenYear;
+    const currentSem = parseInt(semSelect.value);
+
+    semSelect.innerHTML = '';
+    [sem1, sem2].forEach(s => {
+        if (s <= progData.semesters) {
+            const opt = document.createElement('option');
+            opt.value = s;
+            opt.textContent = `Semester ${s}`;
+            if (s === currentSem) opt.selected = true;
+            semSelect.appendChild(opt);
+        }
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    const programSelect = document.getElementById('studentProgramSelect');
+    const yearSelect = document.getElementById('studentYearSelect');
+
+    if (programSelect) {
+        programSelect.addEventListener('change', updateStudentCurriculumDropdowns);
+        updateStudentCurriculumDropdowns();
+    }
+    if (yearSelect) {
+        yearSelect.addEventListener('change', updateSemesterOptions);
+    }
+});
+</script>
+{% endblock %}

@@ -1,0 +1,633 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<style>
+    .whitespace-pre {
+        white-space: pre-wrap;
+        word-break: break-word;
+    }
+    .doubt-image-frame {
+        max-height: 480px;
+        object-fit: contain;
+        background: #f8fafc;
+    }
+    .upvote-active {
+        background-color: #2563eb !important;
+        color: #ffffff !important;
+        border-color: #2563eb !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 960px;">
+
+    <!-- Back Navigation -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <a href="{{ url_for('doubts.index') }}" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+            <i class="bi bi-arrow-left me-1"></i> Back to Questions
+        </a>
+
+        <!-- Doubt Controls (Delete / Reopen) -->
+        <div class="d-flex align-items-center gap-2">
+            {% if doubt.status == 'solved' and current_user.id == doubt.user_id %}
+            <form method="POST" action="{{ url_for('doubts.reopen', doubt_id=doubt.id) }}" onsubmit="return confirm('Reopen this doubt? The current accepted answer status will be reset.');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-warning btn-sm rounded-pill fw-semibold">
+                    <i class="bi bi-arrow-counterclockwise me-1"></i> Reopen Doubt
+                </button>
+            </form>
+            {% endif %}
+
+            {% if (current_user.id == doubt.user_id and doubt.answers.count() == 0) or current_user.is_teacher %}
+            <form method="POST" action="{{ url_for('doubts.delete', doubt_id=doubt.id) }}" onsubmit="return confirm('Are you sure you want to permanently delete this doubt and its attachments?');">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill fw-semibold">
+                    <i class="bi bi-trash3 me-1"></i> Delete Doubt
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- 1. Question Card -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-body p-4 p-md-5">
+
+            <!-- Metadata Header -->
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                <span class="badge bg-primary-subtle text-primary border border-primary-subtle fs-6 px-3 py-1">
+                    {{ doubt.subject }}
+                </span>
+
+                {% if doubt.status == 'solved' %}
+                    <span class="badge bg-success-subtle text-success border border-success-subtle fs-6 px-3 py-1">
+                        <i class="bi bi-check-circle-fill me-1"></i> Solved
+                    </span>
+                {% else %}
+                    <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle fs-6 px-3 py-1">
+                        Open Question
+                    </span>
+                {% endif %}
+
+                <span class="text-muted small ms-auto">
+                    Asked on {{ doubt.created_at.strftime('%b %d, %Y at %H:%M') }}
+                </span>
+            </div>
+
+            <!-- Doubt Title -->
+            <h3 class="fw-bold text-dark mb-4">{{ doubt.title }}</h3>
+
+            <!-- Doubt Body Content -->
+            <div class="text-dark whitespace-pre mb-4 fs-6 leading-relaxed">
+                {{ doubt.body }}
+            </div>
+
+            <!-- Attached Image (if present) -->
+            {% if doubt.image_path %}
+            <div class="mb-4 text-center p-2 border rounded-3 bg-light">
+                <a href="{{ url_for('doubts.doubt_image', doubt_id=doubt.id) }}" target="_blank" title="Click to view full image">
+                    <img src="{{ url_for('doubts.doubt_image', doubt_id=doubt.id) }}" alt="Attached Diagram" class="img-fluid rounded doubt-image-frame shadow-sm">
+                </a>
+                <div class="text-muted small mt-2">
+                    <i class="bi bi-zoom-in me-1"></i> Click image to open in full resolution
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Author Attribution Bar (Strict Anonymity Rule) -->
+            <div class="p-3 bg-light rounded-3 d-flex justify-content-between align-items-center">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="brand-icon-box bg-secondary-subtle text-secondary" style="width: 40px; height: 40px; font-size: 1.15rem;">
+                        {% if doubt.is_anonymous %}
+                            <i class="bi bi-incognito"></i>
+                        {% else %}
+                            <i class="bi bi-person"></i>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <div class="fw-bold text-dark mb-0">
+                            {% if doubt.is_anonymous %}
+                                {% if current_user.is_authenticated and current_user.id == doubt.user_id %}
+                                    <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-incognito me-1"></i>You (Posted anonymously)</span>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-incognito me-1"></i>Anonymous Student</span>
+                                {% endif %}
+                            {% else %}
+                                {{ doubt.user.name }}
+                            {% endif %}
+                        </div>
+                        <div class="text-muted small">
+                            {% if not doubt.is_anonymous %}
+                                {{ doubt.user.branch }} &bull; Year {{ doubt.user.year }}
+                            {% else %}
+                                Author identity concealed
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="text-end">
+                    <span class="badge bg-white text-secondary border px-3 py-2">
+                        <i class="bi bi-chat-left-dots-fill text-primary me-1"></i> {{ doubt.answers.count() }} Answers
+                    </span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Solved Notification Banner -->
+    {% if doubt.status == 'solved' %}
+    <div class="alert alert-success border-success-subtle rounded-3 p-3 mb-4 d-flex align-items-center gap-3">
+        <div class="fs-4 text-success"><i class="bi bi-check-circle-fill"></i></div>
+        <div>
+            <strong class="text-success-emphasis">This doubt has been marked as solved!</strong>
+            <div class="small text-muted">
+                The asker accepted an answer below. You can still contribute alternative perspectives or optimizations.
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Feature A: Instant AI Hint Box (Separated from Classmate Answers) -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white" style="border-left: 5px solid #6366f1 !important;">
+        <div class="card-body p-4">
+            <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-indigo-subtle text-primary p-2 rounded-circle" style="background-color: #e0e7ff; color: #4338ca;">
+                        <i class="bi bi-robot fs-5"></i>
+                    </span>
+                    <div>
+                        <h5 class="fw-bold text-dark mb-0">AI Study Assistant Hint</h5>
+                        <span class="badge bg-secondary-subtle text-secondary small">
+                            AI-generated hint, may contain mistakes
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    {% if doubt.ai_hint %}
+                        {% if current_user.is_authenticated and current_user.id == doubt.user_id and doubt.ai_hint.regenerated_count < 2 %}
+                            <button id="btn-regen-hint" class="btn btn-outline-secondary btn-sm rounded-pill px-3">
+                                <i class="bi bi-arrow-repeat me-1"></i>Regenerate Hint (<span id="regen-count">{{ 2 - doubt.ai_hint.regenerated_count }}</span> left)
+                            </button>
+                        {% endif %}
+                    {% else %}
+                        <button id="btn-get-hint" class="btn btn-primary btn-sm rounded-pill px-3 shadow-sm">
+                            <i class="bi bi-stars me-1"></i>Get AI Hint
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Escalation Notice -->
+            {% if doubt.needs_human %}
+            <div id="human-help-banner" class="alert alert-warning border-warning-subtle rounded-3 py-2 px-3 small mb-3 d-flex align-items-center gap-2">
+                <i class="bi bi-people-fill text-warning fs-6"></i>
+                <div>
+                    <strong>Classmate Peer Help Requested:</strong> The asker requested human assistance. This doubt is prioritized in peer recommendations.
+                </div>
+            </div>
+            {% else %}
+            <div id="human-help-banner" class="alert alert-warning border-warning-subtle rounded-3 py-2 px-3 small mb-3 align-items-center gap-2" style="display: none;">
+                <i class="bi bi-people-fill text-warning fs-6"></i>
+                <div>
+                    <strong>Classmate Peer Help Requested:</strong> The asker requested human assistance. This doubt is prioritized in peer recommendations.
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Loading Spinner -->
+            <div id="ai-hint-loading" class="text-center py-4 text-muted" style="display: none;">
+                <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+                <span class="small">Consulting Gemini academic study assistant...</span>
+            </div>
+
+            <!-- Error Alert -->
+            <div id="ai-hint-error" class="alert alert-danger rounded-3 py-2 px-3 small mb-3" style="display: none;"></div>
+
+            <!-- Hint Display Container -->
+            <div id="ai-hint-content" {% if not doubt.ai_hint %}style="display: none;"{% endif %}>
+                <div id="ai-hint-body" class="p-3 rounded-3 mb-3 text-dark bg-light border border-light-subtle" style="white-space: pre-wrap; font-size: 0.95rem; line-height: 1.6;">{% if doubt.ai_hint %}{{ doubt.ai_hint.hint_text }}{% endif %}</div>
+
+                <!-- Feedback Section for Doubt Owner -->
+                {% if current_user.is_authenticated and current_user.id == doubt.user_id %}
+                <div id="ai-hint-feedback-bar" class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 pt-2 border-top">
+                    <span class="text-muted small">Was this hint helpful?</span>
+                    <div class="d-flex gap-2 align-items-center">
+                        <button id="btn-feedback-helpful" class="btn btn-outline-success btn-sm rounded-pill px-3 {% if doubt.ai_hint and doubt.ai_hint.helpful == True %}active{% endif %}">
+                            <i class="bi bi-hand-thumbs-up me-1"></i>This helped
+                        </button>
+                        <button id="btn-feedback-stuck" class="btn btn-outline-warning btn-sm rounded-pill px-3 {% if doubt.ai_hint and doubt.ai_hint.helpful == False %}active{% endif %}">
+                            <i class="bi bi-people me-1"></i>Still stuck, ask classmates
+                        </button>
+                    </div>
+                </div>
+                <div id="ai-hint-feedback-status" class="small text-muted mt-2" style="display: none;"></div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. Answers Section (Ranked via Custom Hand-Coded Merge Sort) -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h4 class="fw-bold text-dark mb-0">
+                <i class="bi bi-chat-left-text-fill text-primary me-2"></i>Answers &amp; Explanations ({{ answers|length }})
+            </h4>
+            <span class="text-muted small">
+                Ranked by Merge Sort: <span class="badge bg-light text-secondary border">Verified &gt; Accepted &gt; Upvotes</span>
+            </span>
+        </div>
+
+        {% if answers %}
+            {% for a in answers %}
+            <div class="card border-0 shadow-sm rounded-4 mb-3 overflow-hidden {% if doubt.solved_answer_id == a.id %}border-primary border-2{% endif %}">
+                <div class="card-body p-4">
+                    
+                    <!-- Answer Top Badges & Meta -->
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <div class="d-flex flex-wrap align-items-center gap-2">
+                            
+                            <!-- Verified Badge -->
+                            {% if a.is_verified %}
+                            <span class="badge bg-success px-3 py-1">
+                                <i class="bi bi-patch-check-fill me-1"></i>Verified by Faculty{% if a.verifier %} ({{ a.verifier.name }}){% endif %}
+                            </span>
+                            {% endif %}
+
+                            <!-- Accepted Solution Badge -->
+                            {% if doubt.solved_answer_id == a.id %}
+                            <span class="badge bg-primary px-3 py-1">
+                                <i class="bi bi-check-circle-fill me-1"></i>Accepted Solution
+                            </span>
+                            {% endif %}
+
+                            <!-- Author info -->
+                            <span class="fw-bold text-dark">
+                                {{ a.user.name }}
+                            </span>
+
+                            {% if a.user.is_teacher %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                    Faculty
+                                </span>
+                            {% else %}
+                                <span class="text-muted small">
+                                    ({{ a.user.branch }} &bull; Year {{ a.user.year }})
+                                </span>
+                            {% endif %}
+
+                            <!-- Author Reputation Badge for this Subject -->
+                            {% set rep = a.user.reputations.filter_by(subject=doubt.subject).first() %}
+                            {% if rep and rep.badge %}
+                                <span class="badge bg-warning text-dark border border-warning-subtle" title="Subject Reputation: {{ rep.score }} pts">
+                                    <i class="bi bi-award-fill me-1"></i>{{ rep.badge }}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <span class="text-muted small">
+                            {{ a.created_at.strftime('%b %d, %Y at %H:%M') }}
+                        </span>
+                    </div>
+
+                    <!-- Answer Body Content -->
+                    <div class="text-dark whitespace-pre mb-3 fs-6">
+                        {{ a.body }}
+                    </div>
+
+                    <!-- Attached Image (if present) -->
+                    {% if a.image_path %}
+                    <div class="mb-3 text-center p-2 border rounded-3 bg-light">
+                        <a href="{{ url_for('doubts.answer_image', answer_id=a.id) }}" target="_blank" title="Click to view full image">
+                            <img src="{{ url_for('doubts.answer_image', answer_id=a.id) }}" alt="Answer Illustration" class="img-fluid rounded doubt-image-frame shadow-sm">
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    <!-- Answer Actions (Upvote, Accept, Verify) -->
+                    <div class="d-flex flex-wrap justify-content-between align-items-center pt-3 border-top gap-2">
+                        
+                        <!-- Upvote Control -->
+                        <div class="d-flex align-items-center gap-2">
+                            {% if current_user.id == a.user_id %}
+                                <button type="button" class="btn btn-outline-secondary btn-sm rounded-pill px-3" disabled title="You cannot upvote your own answer">
+                                    <i class="bi bi-hand-thumbs-up me-1"></i>
+                                    <span class="fw-bold">{{ a.upvotes }}</span>
+                                </button>
+                                <span class="text-muted" style="font-size: 0.75rem;">(Your answer)</span>
+                            {% else %}
+                                <button type="button" class="btn btn-sm rounded-pill px-3 upvote-btn {% if a.id in user_votes %}upvote-active{% else %}btn-outline-primary{% endif %}" data-answer-id="{{ a.id }}" title="Upvote this helpful solution">
+                                    <i class="bi bi-hand-thumbs-up-fill me-1"></i>
+                                    <span class="fw-bold upvote-count">{{ a.upvotes }}</span>
+                                </button>
+                            {% endif %}
+                        </div>
+
+                        <!-- Moderation & Verification Actions -->
+                        <div class="d-flex align-items-center gap-2">
+
+                            <!-- Asker Action: Mark Accepted -->
+                            {% if current_user.id == doubt.user_id %}
+                                {% if doubt.solved_answer_id == a.id %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle p-2">
+                                        <i class="bi bi-check2-all me-1"></i>Marked as Solution
+                                    </span>
+                                {% else %}
+                                    <form method="POST" action="{{ url_for('doubts.accept', doubt_id=doubt.id, answer_id=a.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-outline-success btn-sm rounded-pill px-3">
+                                            <i class="bi bi-check-circle me-1"></i> Mark as Accepted
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
+
+                            <!-- Teacher Action: Verify / Unverify -->
+                            {% if current_user.is_teacher %}
+                                {% if a.is_verified %}
+                                    <form method="POST" action="{{ url_for('doubts.unverify', answer_id=a.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-outline-danger btn-sm rounded-pill px-3">
+                                            <i class="bi bi-x-circle me-1"></i> Unverify
+                                        </button>
+                                    </form>
+                                {% else %}
+                                    <form method="POST" action="{{ url_for('doubts.verify', answer_id=a.id) }}">
+                                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                        <button type="submit" class="btn btn-success btn-sm rounded-pill px-3 shadow-sm">
+                                            <i class="bi bi-patch-check-fill me-1"></i> Verify as Faculty
+                                        </button>
+                                    </form>
+                                {% endif %}
+                            {% endif %}
+
+                        </div>
+
+                    </div>
+
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="card border-0 shadow-sm rounded-4 p-5 text-center mb-4">
+                <div class="brand-icon-box bg-secondary-subtle text-secondary mx-auto mb-3" style="width: 50px; height: 50px; font-size: 1.4rem;">
+                    <i class="bi bi-chat-square-dots"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-1">No Answers Yet</h5>
+                <p class="text-muted small mb-0">Be the first to provide a clear solution or explanation below.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- 3. Answer Submission Box -->
+    {% set student_ans_count = doubt.answers.filter_by(user_id=current_user.id).count() %}
+    {% if current_user.is_student and student_ans_count >= 3 %}
+        <div class="alert alert-warning border border-warning-subtle rounded-3 p-3">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            You have reached the maximum allowed limit of <strong>3 answers</strong> for this doubt.
+        </div>
+    {% else %}
+        <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+            <div class="card-header bg-white py-3 px-4 border-bottom">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="bi bi-pencil-square text-primary me-2"></i>Your Solution / Explanation
+                </h5>
+            </div>
+            <div class="card-body p-4">
+                <form method="POST" action="{{ url_for('doubts.post_answer', doubt_id=doubt.id) }}" enctype="multipart/form-data">
+                    {{ form.hidden_tag() }}
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold text-secondary">
+                            Detailed Answer <span class="text-danger">*</span>
+                        </label>
+                        {{ form.body(rows=5, class="form-control form-control-modern rounded-3" + (" is-invalid" if form.body.errors else ""), placeholder="Provide step-by-step reasoning, relevant algorithm proofs, code, or references...") }}
+                        <div class="text-muted small mt-1">Minimum 5 characters, maximum 3000 characters.</div>
+                        {% if form.body.errors %}
+                            <div class="invalid-feedback d-block">{{ form.body.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label fw-semibold text-secondary">
+                            Attach Supporting Diagram or Screenshot (Optional)
+                        </label>
+                        {{ form.image(class="form-control form-control-modern rounded-3" + (" is-invalid" if form.image.errors else ""), accept=".jpg,.jpeg,.png") }}
+                        <div class="text-muted small mt-1">Supported formats: JPG, JPEG, PNG. Max size: 5MB.</div>
+                        {% if form.image.errors %}
+                            <div class="invalid-feedback d-block">{{ form.image.errors[0] }}</div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-primary rounded-pill px-5 fw-semibold shadow-sm">
+                            <i class="bi bi-send-fill me-1"></i> Submit Answer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]') ? 
+                      document.querySelector('meta[name="csrf-token"]').getAttribute("content") : "";
+
+    // Upvote Toggle AJAX
+    document.querySelectorAll(".upvote-btn").forEach(function (button) {
+        button.addEventListener("click", function () {
+            const answerId = this.getAttribute("data-answer-id");
+            if (!answerId) return;
+
+            const btn = this;
+            const countSpan = btn.querySelector(".upvote-count");
+
+            fetch("/doubts/answers/" + encodeURIComponent(answerId) + "/upvote", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "X-CSRFToken": csrfToken,
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+            .then(function (response) {
+                if (!response.ok) {
+                    return response.json().then(function (err) { throw new Error(err.error || "Upvote failed"); });
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                if (countSpan) {
+                    countSpan.textContent = data.upvotes; // Safe textContent update
+                }
+                if (data.voted) {
+                    btn.classList.add("upvote-active");
+                    btn.classList.remove("btn-outline-primary");
+                } else {
+                    btn.classList.remove("upvote-active");
+                    btn.classList.add("btn-outline-primary");
+                }
+            })
+            .catch(function (error) {
+                alert(error.message);
+            });
+        });
+    });
+
+    // AI Hint Fetch & Regeneration AJAX
+    const doubtId = "{{ doubt.id }}";
+    const getHintBtn = document.getElementById("btn-get-hint");
+    const regenHintBtn = document.getElementById("btn-regen-hint");
+    const hintLoading = document.getElementById("ai-hint-loading");
+    const hintError = document.getElementById("ai-hint-error");
+    const hintContent = document.getElementById("ai-hint-content");
+    const hintBody = document.getElementById("ai-hint-body");
+    const humanBanner = document.getElementById("human-help-banner");
+
+    function fetchHint(regenerate) {
+        if (getHintBtn) getHintBtn.disabled = true;
+        if (regenHintBtn) regenHintBtn.disabled = true;
+        if (hintError) {
+            hintError.style.display = "none";
+            hintError.textContent = "";
+        }
+        if (hintLoading) hintLoading.style.display = "block";
+
+        fetch("/doubts/" + encodeURIComponent(doubtId) + "/ai-hint", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken,
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: JSON.stringify({ regenerate: regenerate })
+        })
+        .then(function (response) {
+            return response.json().then(function (json) {
+                if (!response.ok || !json.success) {
+                    throw new Error(json.error || "AI hint generation failed.");
+                }
+                return json;
+            });
+        })
+        .then(function (data) {
+            if (hintBody) {
+                hintBody.textContent = data.hint_text; // Safe textContent insertion
+            }
+            if (hintContent) {
+                hintContent.style.display = "block";
+            }
+            if (getHintBtn) {
+                getHintBtn.style.display = "none";
+            }
+            if (regenHintBtn) {
+                if (data.can_regenerate) {
+                    const countSpan = document.getElementById("regen-count");
+                    if (countSpan) countSpan.textContent = 2 - data.regenerated_count;
+                    regenHintBtn.disabled = false;
+                } else {
+                    regenHintBtn.style.display = "none";
+                }
+            }
+            if (data.needs_human && humanBanner) {
+                humanBanner.style.display = "flex";
+            }
+        })
+        .catch(function (err) {
+            if (hintError) {
+                hintError.textContent = err.message || "AI features are temporarily unavailable.";
+                hintError.style.display = "block";
+            }
+        })
+        .finally(function () {
+            if (hintLoading) hintLoading.style.display = "none";
+            if (getHintBtn) getHintBtn.disabled = false;
+            if (regenHintBtn) regenHintBtn.disabled = false;
+        });
+    }
+
+    if (getHintBtn) {
+        getHintBtn.addEventListener("click", function () {
+            fetchHint(false);
+        });
+    }
+
+    if (regenHintBtn) {
+        regenHintBtn.addEventListener("click", function () {
+            fetchHint(true);
+        });
+    }
+
+    // AI Hint Feedback Buttons
+    const helpfulBtn = document.getElementById("btn-feedback-helpful");
+    const stuckBtn = document.getElementById("btn-feedback-stuck");
+    const feedbackStatus = document.getElementById("ai-hint-feedback-status");
+
+    function sendFeedback(helpful) {
+        if (helpfulBtn) helpfulBtn.disabled = true;
+        if (stuckBtn) stuckBtn.disabled = true;
+
+        fetch("/doubts/" + encodeURIComponent(doubtId) + "/ai-hint/feedback", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": csrfToken,
+                "X-Requested-With": "XMLHttpRequest"
+            },
+            body: JSON.stringify({ helpful: helpful })
+        })
+        .then(function (res) {
+            return res.json().then(function (json) {
+                if (!res.ok || !json.success) {
+                    throw new Error(json.error || "Failed to submit feedback.");
+                }
+                return json;
+            });
+        })
+        .then(function (data) {
+            if (helpfulBtn && stuckBtn) {
+                if (helpful) {
+                    helpfulBtn.classList.add("active");
+                    stuckBtn.classList.remove("active");
+                } else {
+                    stuckBtn.classList.add("active");
+                    helpfulBtn.classList.remove("active");
+                    if (humanBanner) humanBanner.style.display = "flex";
+                }
+            }
+            if (feedbackStatus) {
+                feedbackStatus.textContent = data.message;
+                feedbackStatus.style.display = "block";
+            }
+        })
+        .catch(function (err) {
+            alert(err.message);
+        })
+        .finally(function () {
+            if (helpfulBtn) helpfulBtn.disabled = false;
+            if (stuckBtn) stuckBtn.disabled = false;
+        });
+    }
+
+    if (helpfulBtn) {
+        helpfulBtn.addEventListener("click", function () {
+            sendFeedback(true);
+        });
+    }
+
+    if (stuckBtn) {
+        stuckBtn.addEventListener("click", function () {
+            sendFeedback(false);
+        });
+    }
+});
+</script>
+{% endblock %}

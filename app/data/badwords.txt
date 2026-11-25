@@ -1,0 +1,83 @@
+# Bad Words Dictionary for Aho-Corasick Content Moderation
+# AI-Powered Collaborative Learning and Doubt Resolution Platform
+# Loaded once at application startup. Case-insensitive matching.
+# Lines starting with # are comments. Blank lines are ignored.
+
+# Common English profanity and slurs
+fuck
+fucking
+fucked
+fucker
+fuckers
+shit
+shits
+shitty
+bullshit
+bitch
+bitches
+bitching
+bitchy
+bastard
+bastards
+cunt
+cunts
+dick
+dicks
+dickhead
+dickheads
+asshole
+assholes
+dumbass
+dumbasses
+jackass
+jackasses
+pussy
+pussies
+slut
+sluts
+whore
+whores
+idiot
+idiots
+moron
+morons
+faggot
+faggots
+nigger
+niggers
+
+# Common romanized Hindi (Hinglish) abusive terms
+chutiya
+chutiye
+chutiyapa
+bhosdike
+bhosadike
+bhosadi
+madarchod
+madarchodh
+behenchod
+bhenchod
+bhenchodd
+harami
+haramee
+kutta
+kutte
+kamina
+kamine
+saala
+saale
+sala
+sale
+gandu
+gaandu
+randi
+raandi
+lauda
+lawda
+lodu
+loduchand
+chirkut
+gadha
+gadhe
+ullu
+ullu ke patthe

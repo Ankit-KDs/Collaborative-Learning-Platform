@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Header Banner -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card card-modern p-4 bg-white border-0 shadow-sm">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h2 class="fw-bold mb-0 text-dark">Collaborative Study Groups</h2>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1">
+                                Stage 4 Milestone
+                            </span>
+                        </div>
+                        <p class="text-muted mb-0 small">
+                            Small cohorts (3&ndash;5 students) designed for peer mentoring, problem-solving, and group discussions.
+                        </p>
+                    </div>
+                    {% if not is_teacher %}
+                    <div>
+                        <a href="{{ url_for('groups.create') }}" class="btn btn-primary rounded-pill px-4 shadow-sm fw-semibold">
+                            <i class="bi bi-plus-circle me-1"></i> Create Study Group
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Notice Banner (If Teacher) -->
+    {% if is_teacher %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card card-modern p-5 text-center bg-white border-0 shadow-sm">
+                <div class="stat-icon stat-icon-amber mx-auto mb-3" style="width: 64px; height: 64px; font-size: 2rem;">
+                    <i class="bi bi-mortarboard"></i>
+                </div>
+                <h4 class="fw-bold mb-2">Faculty Account Information</h4>
+                <p class="text-muted col-md-8 mx-auto mb-4">
+                    Study groups are peer-led cohorts curated exclusively for undergraduate students. Faculty members can monitor overall community activity, resolve doubts, and verify answers in upcoming modules.
+                </p>
+                <div>
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="bi bi-arrow-left me-1"></i> Return to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+
+    <!-- 1. PENDING GROUP INVITATIONS SECTION -->
+    {% if pending_invites %}
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="d-flex align-items-center gap-2 mb-3">
+                <div class="stat-icon stat-icon-amber" style="width: 36px; height: 36px; font-size: 1.1rem;">
+                    <i class="bi bi-envelope-open-fill"></i>
+                </div>
+                <div>
+                    <h5 class="fw-bold mb-0">Pending Group Invitations</h5>
+                    <div class="text-muted small">Invitations from peers to join their collaborative study cohorts</div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                {% for inv in pending_invites %}
+                {% set g_room = inv.room %}
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card card-modern p-4 h-100 d-flex flex-column justify-content-between border-0 shadow-sm">
+                        <div>
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                    {{ g_room.subject }}
+                                </span>
+                                <span class="text-muted small">
+                                    <i class="bi bi-clock me-1"></i>{{ inv.created_at.strftime('%b %d') }}
+                                </span>
+                            </div>
+
+                            <h5 class="fw-bold text-dark mb-1">{{ g_room.name }}</h5>
+                            <p class="text-muted small mb-3">
+                                Invited by <strong>{{ inv.invited_by.name }}</strong> ({{ inv.invited_by.branch }}, Year {{ inv.invited_by.year }}).
+                            </p>
+                        </div>
+
+                        <!-- Action Buttons: Accept / Decline -->
+                        <div class="d-flex gap-2 pt-3 border-top">
+                            <form method="POST" action="{{ url_for('groups.accept_group_invite', invite_id=inv.id) }}" class="flex-grow-1">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-success btn-sm rounded-pill w-100 fw-semibold">
+                                    <i class="bi bi-check-lg me-1"></i> Accept
+                                </button>
+                            </form>
+
+                            <form method="POST" action="{{ url_for('groups.decline_group_invite', invite_id=inv.id) }}" class="flex-grow-1">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                <button type="submit" class="btn btn-outline-secondary btn-sm rounded-pill w-100 fw-semibold">
+                                    <i class="bi bi-x-lg me-1"></i> Decline
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- 2. MY STUDY GROUPS SECTION -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="stat-icon stat-icon-blue" style="width: 36px; height: 36px; font-size: 1.1rem;">
+                        <i class="bi bi-collection-fill"></i>
+                    </div>
+                    <div>
+                        <h5 class="fw-bold mb-0">Your Active &amp; Archived Groups</h5>
+                        <div class="text-muted small">Cohort discussion rooms with member rosters and persistent problem chat</div>
+                    </div>
+                </div>
+            </div>
+
+            {% if user_groups %}
+            <div class="row g-3">
+                {% for item in user_groups %}
+                {% set g = item.room %}
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="card card-modern p-4 h-100 d-flex flex-column justify-content-between border-0 shadow-sm card-hover">
+                        <div>
+                            <!-- Header: Subject & Active Badge -->
+                            <div class="d-flex align-items-center justify-content-between mb-2">
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                    {{ g.subject }}
+                                </span>
+                                {% if g.is_active %}
+                                    <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                        Active
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary-subtle text-secondary border">
+                                        Archived
+                                    </span>
+                                {% endif %}
+                            </div>
+
+                            <!-- Group Title -->
+                            <h5 class="fw-bold text-dark mb-1">{{ g.name }}</h5>
+
+                            <!-- Role and Capacity Badges -->
+                            <div class="d-flex align-items-center gap-2 mb-3">
+                                {% if item.is_admin %}
+                                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                        <i class="bi bi-star-fill me-1"></i>Admin
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-light text-secondary border">
+                                        Member
+                                    </span>
+                                {% endif %}
+                                <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                                    <i class="bi bi-people-fill me-1"></i>{{ item.member_count }}/{{ item.max_size }}
+                                </span>
+                            </div>
+
+                            <!-- Last Message Preview -->
+                            <div class="p-2 rounded bg-light bg-opacity-50 small text-muted mb-3">
+                                {% if item.last_message %}
+                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                        <span class="fw-semibold text-dark text-truncate" style="max-width: 140px;">
+                                            {{ item.last_message.sender.name if item.last_message.sender else 'System' }}
+                                        </span>
+                                        <span class="text-muted" style="font-size: 0.72rem;">
+                                            {{ item.last_message.created_at.strftime('%b %d') }}
+                                        </span>
+                                    </div>
+                                    <div class="text-truncate">
+                                        {% if item.last_message.image_path %}
+                                            <i class="bi bi-image me-1"></i>[Photo Attachment]
+                                        {% else %}
+                                            {{ item.last_message.text }}
+                                        {% endif %}
+                                    </div>
+                                {% else %}
+                                    <em>No messages exchanged yet.</em>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <!-- Open Group Button -->
+                        <div class="pt-2 border-top">
+                            <a href="{{ url_for('groups.group_room', room_id=g.id) }}" class="btn btn-outline-primary btn-sm rounded-pill w-100 fw-semibold">
+                                <i class="bi bi-chat-dots me-1"></i> Open Group Chat
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <!-- Empty State -->
+            <div class="card card-modern p-5 text-center bg-white border-0 shadow-sm">
+                <div class="stat-icon stat-icon-blue mx-auto mb-3" style="width: 56px; height: 56px; font-size: 1.8rem;">
+                    <i class="bi bi-people"></i>
+                </div>
+                <h5 class="fw-bold mb-1">No Study Groups Joined Yet</h5>
+                <p class="text-muted col-md-6 mx-auto mb-4">
+                    Form a 3&ndash;5 student study cohort to collaborate with classmates across your core courses, or wait for an invitation.
+                </p>
+                <div>
+                    <a href="{{ url_for('groups.create') }}" class="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm">
+                        <i class="bi bi-plus-circle me-1"></i> Create Study Group
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    {% endif %}
+
+</div>
+{% endblock %}

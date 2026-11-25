@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+
+{% block title %}Faculty Moderation Queue - Collaborative Learning Platform{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold mb-1 d-flex align-items-center gap-2">
+                <i class="bi bi-shield-exclamation text-danger"></i> Moderation Review Queue
+                <span class="badge bg-danger-subtle text-danger border border-danger-subtle rounded-pill fs-6">
+                    {{ total_count }} Pending
+                </span>
+            </h2>
+            <p class="text-muted small mb-0">
+                Audit automatically flagged messages and student harassment/abuse reports. Decisions apply immediately.
+            </p>
+        </div>
+
+        <!-- Filter Navigation -->
+        <div class="btn-group rounded-pill p-1 bg-white border shadow-sm" role="group">
+            <a href="{{ url_for('moderation.index', filter='all') }}"
+               class="btn btn-sm rounded-pill px-3 fw-semibold {% if filter_type == 'all' %}btn-primary text-white{% else %}btn-light text-muted{% endif %}">
+                All
+            </a>
+            <a href="{{ url_for('moderation.index', filter='auto') }}"
+               class="btn btn-sm rounded-pill px-3 fw-semibold {% if filter_type == 'auto' %}btn-primary text-white{% else %}btn-light text-muted{% endif %}">
+                <i class="bi bi-robot me-1"></i> Auto-Flagged
+            </a>
+            <a href="{{ url_for('moderation.index', filter='user') }}"
+               class="btn btn-sm rounded-pill px-3 fw-semibold {% if filter_type == 'user' %}btn-primary text-white{% else %}btn-light text-muted{% endif %}">
+                <i class="bi bi-people-fill me-1"></i> User-Reported
+            </a>
+        </div>
+    </div>
+
+    {% if items %}
+        <div class="d-flex flex-column gap-4">
+            {% for item in items %}
+            {% set msg = item.message %}
+            {% set sender = item.sender %}
+            <div class="card card-modern border-0 shadow-sm bg-white overflow-hidden">
+                <div class="card-header bg-white border-bottom p-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        {% if msg.room.is_group %}
+                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">
+                                <i class="bi bi-collection-fill me-1"></i> Group: {{ msg.room.name }}
+                            </span>
+                        {% else %}
+                            <span class="badge bg-secondary-subtle text-secondary border">
+                                <i class="bi bi-person-fill me-1"></i> 1-to-1 Chat ({{ msg.room.subject or 'General' }})
+                            </span>
+                        {% endif %}
+
+                        <span class="text-muted small">
+                            <i class="bi bi-clock me-1"></i> {{ msg.created_at.strftime('%b %d, %Y at %I:%M %p') }}
+                        </span>
+                    </div>
+
+                    <!-- Sender Info & Strikes -->
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="fw-semibold small text-dark">
+                            {{ sender.name if sender else 'Unknown User' }}
+                        </span>
+                        {% if sender %}
+                            <span class="badge bg-light text-muted border">
+                                Year {{ sender.year }} &bull; {{ sender.branch }}
+                            </span>
+                            <span class="badge {% if item.sender_strikes >= 3 %}bg-danger text-white{% elif item.sender_strikes > 0 %}bg-warning text-dark{% else %}bg-secondary-subtle text-secondary{% endif %}">
+                                {{ item.sender_strikes }} {% if item.sender_strikes == 1 %}strike{% else %}strikes{% endif %}
+                            </span>
+                            {% if item.is_repeat_offender %}
+                                <span class="badge bg-danger text-white fw-bold">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> Repeat Offender
+                                </span>
+                            {% endif %}
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="card-body p-4">
+                    <!-- Flag Reason Banner -->
+                    <div class="alert alert-light border d-flex flex-wrap align-items-center justify-content-between gap-2 p-3 mb-3">
+                        <div>
+                            <span class="fw-bold text-dark small text-uppercase letter-spacing me-2">Trigger Reason:</span>
+                            {% if msg.flag_reason and msg.flag_reason.startswith('auto') %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                    <i class="bi bi-robot me-1"></i> Automated Profanity Detection
+                                </span>
+                            {% else %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                    <i class="bi bi-flag-fill me-1"></i> Reported by {{ item.report_count }} student(s)
+                                </span>
+                            {% endif %}
+
+                            {% if item.reason_counts %}
+                                <span class="ms-2 small text-muted">
+                                    Breakdown:
+                                    {% for r_name, r_cnt in item.reason_counts.items() %}
+                                        <span class="badge bg-secondary-subtle text-secondary me-1">{{ r_name }}: {{ r_cnt }}</span>
+                                    {% endfor %}
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        {% if msg.text == '[message hidden pending review]' %}
+                            <span class="badge bg-dark text-white">
+                                <i class="bi bi-eye-slash-fill me-1"></i> Auto-Hidden (Threshold Reached)
+                            </span>
+                        {% endif %}
+                    </div>
+
+                    <!-- Reporter Notes if any -->
+                    {% if item.report_notes %}
+                        <div class="mb-3 p-3 bg-light rounded border">
+                            <h6 class="small fw-bold text-muted mb-2"><i class="bi bi-chat-quote-fill me-1"></i> Student Report Notes:</h6>
+                            <ul class="mb-0 small text-dark ps-3">
+                                {% for note in item.report_notes %}
+                                    <li>&ldquo;{{ note }}&rdquo;</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% endif %}
+
+                    <!-- Side-by-Side Message Comparison -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-muted text-uppercase">What Classmates See (Masked)</label>
+                            <div class="p-3 bg-light rounded border font-monospace small text-muted">
+                                {{ item.masked_text }}
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-6">
+                            <label class="form-label small fw-bold text-danger text-uppercase">Original Text (Faculty Eyes Only)</label>
+                            <div class="p-3 rounded border border-danger-subtle bg-danger-subtle bg-opacity-10 font-monospace small text-dark fw-semibold">
+                                {{ item.original_text }}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Surrounding Conversation Context (Accordion) -->
+                    <div class="accordion mb-4" id="contextAccordion{{ msg.id }}">
+                        <div class="accordion-item border">
+                            <h2 class="accordion-header" id="headingContext{{ msg.id }}">
+                                <button class="accordion-button collapsed py-2 small fw-semibold text-secondary" type="button" data-bs-toggle="collapse" data-bs-target="#collapseContext{{ msg.id }}">
+                                    <i class="bi bi-chat-left-text me-2"></i> View Surrounding Chat Context ({{ item.context_before|length }} before, {{ item.context_after|length }} after)
+                                </button>
+                            </h2>
+                            <div id="collapseContext{{ msg.id }}" class="accordion-collapse collapse" data-bs-parent="#contextAccordion{{ msg.id }}">
+                                <div class="accordion-body bg-light p-3">
+                                    <div class="d-flex flex-column gap-2 small">
+                                        {% for cmsg in item.context_before %}
+                                            <div class="p-2 bg-white rounded border border-light">
+                                                <span class="fw-bold text-secondary">{{ cmsg.sender.name if cmsg.sender else 'System' }}:</span>
+                                                <span class="text-muted">{{ cmsg.text }}</span>
+                                                <span class="text-muted float-end" style="font-size: 0.7rem;">{{ cmsg.created_at.strftime('%I:%M %p') }}</span>
+                                            </div>
+                                        {% endfor %}
+
+                                        <!-- The flagged message highlight -->
+                                        <div class="p-2 bg-danger-subtle rounded border border-danger text-dark fw-semibold">
+                                            <span class="text-danger fw-bold"><i class="bi bi-arrow-right-short"></i> [FLAGGED] {{ msg.sender.name if msg.sender else 'Sender' }}:</span>
+                                            <span>{{ item.original_text }}</span>
+                                            <span class="text-muted float-end" style="font-size: 0.7rem;">{{ msg.created_at.strftime('%I:%M %p') }}</span>
+                                        </div>
+
+                                        {% for cmsg in item.context_after %}
+                                            <div class="p-2 bg-white rounded border border-light">
+                                                <span class="fw-bold text-secondary">{{ cmsg.sender.name if cmsg.sender else 'System' }}:</span>
+                                                <span class="text-muted">{{ cmsg.text }}</span>
+                                                <span class="text-muted float-end" style="font-size: 0.7rem;">{{ cmsg.created_at.strftime('%I:%M %p') }}</span>
+                                            </div>
+                                        {% endfor %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Action Controls -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 pt-2 border-top">
+                        <!-- Dismiss Form -->
+                        <form method="POST" action="{{ url_for('moderation.dismiss', message_id=msg.id) }}" onsubmit="return confirm('Dismiss this report? False-positive reports will be unmasked.');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm rounded-pill px-4 fw-semibold">
+                                <i class="bi bi-x-circle me-1"></i> Dismiss Report
+                            </button>
+                        </form>
+
+                        <!-- Confirm Form -->
+                        <form method="POST" action="{{ url_for('moderation.confirm', message_id=msg.id) }}" onsubmit="return confirm('Confirm violation? This will keep the message masked and issue +1 strike to the student.');">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                            <button type="submit" class="btn btn-danger btn-sm rounded-pill px-4 fw-semibold">
+                                <i class="bi bi-check-circle-fill me-1"></i> Confirm Violation &amp; Add Strike
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <nav class="d-flex justify-content-center mt-4">
+            <ul class="pagination pagination-sm">
+                <li class="page-item {% if page <= 1 %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('moderation.index', filter=filter_type, page=page-1) }}">Previous</a>
+                </li>
+                {% for p in range(1, total_pages + 1) %}
+                <li class="page-item {% if p == page %}active{% endif %}">
+                    <a class="page-link" href="{{ url_for('moderation.index', filter=filter_type, page=p) }}">{{ p }}</a>
+                </li>
+                {% endfor %}
+                <li class="page-item {% if page >= total_pages %}disabled{% endif %}">
+                    <a class="page-link" href="{{ url_for('moderation.index', filter=filter_type, page=page+1) }}">Next</a>
+                </li>
+            </ul>
+        </nav>
+        {% endif %}
+
+    {% else %}
+        <div class="card card-modern border-0 shadow-sm p-5 text-center bg-white">
+            <div class="brand-icon-box bg-success-subtle text-success mx-auto mb-3" style="width: 56px; height: 56px; font-size: 1.6rem;">
+                <i class="bi bi-shield-check"></i>
+            </div>
+            <h5 class="fw-bold text-dark mb-1">Queue is Clear!</h5>
+            <p class="text-muted small mb-0">
+                {% if filter_type != 'all' %}
+                    No pending items matching the filter "<strong>{{ filter_type }}</strong>".
+                {% else %}
+                    There are currently no flagged or reported messages awaiting faculty review.
+                {% endif %}
+            </p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4" style="max-width: 1000px;">
+
+    {% if is_teacher %}
+    <!-- Friendly Teacher Advisory Notice -->
+    <div class="card border-0 shadow-sm rounded-4 text-center p-5 bg-white">
+        <div class="brand-icon-box bg-primary-subtle text-primary mx-auto mb-3" style="width: 64px; height: 64px; font-size: 1.8rem;">
+            <i class="bi bi-mortarboard-fill"></i>
+        </div>
+        <h4 class="fw-bold text-dark mb-2">Faculty Advisory: Student Analytics Dashboard</h4>
+        <p class="text-muted mb-4 mx-auto" style="max-width: 520px;">
+            The personalized learning path and weak-topic diagnostics engine are designed for student self-directed learning.
+            You can support students by reviewing doubts and verifying community solutions.
+        </p>
+        <div>
+            <a href="{{ url_for('doubts.index') }}" class="btn btn-primary rounded-pill px-4 shadow-sm">
+                <i class="bi bi-chat-left-text me-1"></i> Browse Community Doubts
+            </a>
+        </div>
+    </div>
+    {% else %}
+
+    <!-- Student Dashboard Header -->
+    <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 mb-4">
+        <div>
+            <h2 class="fw-bold text-dark mb-1">
+                <i class="bi bi-compass-fill text-primary me-2"></i>Personalized Learning Path
+            </h2>
+            <p class="text-muted small mb-0">Algorithmic diagnostic analytics &amp; AI-curated study roadmaps tailored to your focus areas.</p>
+        </div>
+        <div>
+            <form id="plan-gen-form" method="POST" action="{{ url_for('learning.generate_plan') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% if plan_data %}
+                    {% if can_regenerate %}
+                        <button id="btn-gen-plan" type="submit" class="btn btn-outline-primary rounded-pill px-4 btn-sm shadow-sm">
+                            <i class="bi bi-arrow-repeat me-1"></i> Regenerate Study Plan
+                        </button>
+                    {% else %}
+                        <button type="button" class="btn btn-outline-secondary rounded-pill px-4 btn-sm" disabled title="Cooldown in effect">
+                            <i class="bi bi-hourglass-split me-1"></i> Available in {{ cooldown_minutes_left }}m
+                        </button>
+                    {% endif %}
+                {% else %}
+                    <button id="btn-gen-plan" type="submit" class="btn btn-primary rounded-pill px-4 btn-sm shadow-sm">
+                        <i class="bi bi-stars me-1"></i> Generate My Study Plan
+                    </button>
+                {% endif %}
+            </form>
+        </div>
+    </div>
+
+    <!-- Generating Alert Spinner -->
+    <div id="plan-loading-spinner" class="alert alert-info border-info-subtle rounded-3 p-3 text-center my-3" style="display: none;">
+        <div class="spinner-border spinner-border-sm text-primary me-2" role="status"></div>
+        <span class="small fw-semibold">Consulting Gemini to synthesize your personalized curriculum path (typically takes 3–6 seconds)...</span>
+    </div>
+
+    <!-- 1. AI Study Plan Card (if available) -->
+    {% if plan_data %}
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden" style="border-left: 5px solid #6366f1 !important;">
+        <div class="card-header bg-white p-4 border-0 pb-0 d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-indigo-subtle text-primary p-2 rounded-circle" style="background-color: #e0e7ff; color: #4338ca;">
+                    <i class="bi bi-robot fs-5"></i>
+                </span>
+                <div>
+                    <h5 class="fw-bold text-dark mb-0">AI Actionable Study Plan</h5>
+                    <span class="text-muted small">Generated {{ learning_path.generated_at.strftime('%b %d, %Y at %I:%M %p') }}</span>
+                </div>
+            </div>
+            <span class="badge bg-secondary-subtle text-secondary small">
+                AI-generated advisory
+            </span>
+        </div>
+
+        <div class="card-body p-4">
+            <!-- Skill Mismatch Notice -->
+            {% if has_hash_mismatch %}
+            <div class="alert alert-warning border-warning-subtle rounded-3 p-3 mb-4 d-flex align-items-center gap-3">
+                <i class="bi bi-exclamation-triangle-fill text-warning fs-5"></i>
+                <div class="small">
+                    <strong>Your skills or activity changed since this plan was generated.</strong>
+                    You can click <em>Regenerate Study Plan</em> above to refresh your recommendations.
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Motivation Quote -->
+            {% if plan_data.motivation %}
+            <div class="p-3 bg-light rounded-3 mb-4 border-start border-4 border-primary">
+                <i class="bi bi-quote text-primary fs-5 me-1"></i>
+                <span class="fst-italic text-dark fw-semibold">{{ plan_data.motivation }}</span>
+            </div>
+            {% endif %}
+
+            <!-- Subjects Roadmap Grid -->
+            <div class="row g-4">
+                {% for sub_item in plan_data.subjects %}
+                <div class="col-12 col-md-4">
+                    <div class="card h-100 border rounded-3 p-3 bg-light-subtle shadow-none">
+                        <h6 class="fw-bold text-primary mb-3 d-flex align-items-center gap-2">
+                            <i class="bi bi-bookmark-check-fill"></i>
+                            {{ sub_item.subject }}
+                        </h6>
+                        <ol class="ps-3 mb-0 small text-secondary">
+                            {% for step in sub_item.steps %}
+                            <li class="mb-2 leading-snug">{{ step }}</li>
+                            {% endfor %}
+                        </ol>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- Prompt to Generate Plan -->
+    <div class="card border-0 shadow-sm rounded-4 p-4 text-center mb-4 bg-white">
+        <div class="brand-icon-box bg-primary-subtle text-primary mx-auto mb-2" style="width: 48px; height: 48px; font-size: 1.3rem;">
+            <i class="bi bi-stars"></i>
+        </div>
+        <h5 class="fw-bold text-dark mb-1">No AI Study Plan Generated Yet</h5>
+        <p class="text-muted small mb-3">Click <strong>Generate My Study Plan</strong> above to create an AI-powered study roadmap based on your diagnostic stats below.</p>
+    </div>
+    {% endif %}
+
+    <!-- 2. Priority Subjects Quick Action Shortcuts -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+        <div class="card-header bg-white p-4 border-0 pb-2">
+            <h5 class="fw-bold text-dark mb-1">
+                <i class="bi bi-lightning-charge-fill text-warning me-2"></i>Priority Learning Actions
+            </h5>
+            <p class="text-muted small mb-0">Recommended shortcuts for your top weak and developing subject areas.</p>
+        </div>
+
+        <div class="card-body p-4 pt-2">
+            <div class="row g-3">
+                {% for s in top_subjects %}
+                <div class="col-12 col-md-4">
+                    <div class="card h-100 border rounded-3 p-3 bg-white hover-shadow transition">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold text-dark">{{ s.subject }}</span>
+                            {% if s.level == 'Weak' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">Weak</span>
+                            {% elif s.level == 'Average' %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">Average</span>
+                            {% elif s.level == 'Strong' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle">Strong</span>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary border">Not Set</span>
+                            {% endif %}
+                        </div>
+
+                        <div class="text-muted small mb-3">
+                            Priority Score: <strong class="text-primary">{{ s.priority_score }}</strong> &bull;
+                            {{ s.open_doubts }} open doubt(s)
+                        </div>
+
+                        <div class="d-flex flex-column gap-2 mt-auto">
+                            <a href="{{ url_for('matches.matches') }}" class="btn btn-outline-primary btn-sm rounded-pill text-start px-3">
+                                <i class="bi bi-people-fill me-1"></i> Find a Study Buddy
+                            </a>
+                            <a href="{{ url_for('quiz.index', subject=s.subject) }}" class="btn btn-outline-secondary btn-sm rounded-pill text-start px-3">
+                                <i class="bi bi-patch-question me-1"></i> Take Practice Quiz
+                            </a>
+                            <a href="{{ url_for('doubts.index', subject=s.subject) }}" class="btn btn-outline-info btn-sm rounded-pill text-start px-3">
+                                <i class="bi bi-chat-left-dots me-1"></i> Browse Doubts
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- 3. Local Diagnostic Table (Computed Locally Without AI) -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white overflow-hidden">
+        <div class="card-header bg-white p-4 border-0 pb-2">
+            <h5 class="fw-bold text-dark mb-1">
+                <i class="bi bi-table text-primary me-2"></i>Curriculum Diagnostics &amp; Priority Ranking
+            </h5>
+            <p class="text-muted small mb-0">Computed deterministically from your self-assessed skills, open doubts, and quiz results.</p>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="bg-light text-secondary small text-uppercase">
+                    <tr>
+                        <th class="py-3 px-4">Subject</th>
+                        <th class="py-3">Skill Level</th>
+                        <th class="py-3">Doubts Asked</th>
+                        <th class="py-3">Unresolved</th>
+                        <th class="py-3">Quiz Average</th>
+                        <th class="py-3 text-end px-4">Priority Score</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in ranked_subjects %}
+                    <tr>
+                        <td class="py-3 px-4 fw-bold text-dark">
+                            {{ item.subject }}
+                        </td>
+                        <td class="py-3">
+                            {% if item.level == 'Weak' %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle px-3 py-1">Weak</span>
+                            {% elif item.level == 'Average' %}
+                                <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-1">Average</span>
+                            {% elif item.level == 'Strong' %}
+                                <span class="badge bg-success-subtle text-success border border-success-subtle px-3 py-1">Strong</span>
+                            {% else %}
+                                <span class="badge bg-secondary-subtle text-secondary border px-3 py-1">Not Set</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 text-secondary">
+                            {{ item.total_doubts }}
+                        </td>
+                        <td class="py-3">
+                            {% if item.open_doubts > 0 %}
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                    {{ item.open_doubts }} Open
+                                </span>
+                            {% else %}
+                                <span class="text-muted small">0 Open</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3">
+                            {% if item.quiz_avg is not none %}
+                                <span class="fw-bold {% if item.quiz_avg >= 80 %}text-success{% elif item.quiz_avg >= 50 %}text-primary{% else %}text-danger{% endif %}">
+                                    {{ item.quiz_avg }}%
+                                </span>
+                                <span class="text-muted small">({{ item.quiz_attempts_count }} test{% if item.quiz_attempts_count != 1 %}s{% endif %})</span>
+                            {% else %}
+                                <span class="text-muted small">No quizzes yet</span>
+                            {% endif %}
+                        </td>
+                        <td class="py-3 text-end px-4">
+                            <span class="badge bg-primary text-white rounded-pill px-3 py-1 fs-6">
+                                {{ item.priority_score }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 4. Chart.js Visualization of Quiz Performance -->
+    <div class="card border-0 shadow-sm rounded-4 mb-4 bg-white">
+        <div class="card-header bg-white p-4 border-0 pb-2">
+            <h5 class="fw-bold text-dark mb-1">
+                <i class="bi bi-bar-chart-line-fill text-primary me-2"></i>Subject Quiz Mastery Overview
+            </h5>
+            <p class="text-muted small mb-0">Historical quiz performance across subjects.</p>
+        </div>
+        <div class="card-body p-4">
+            <div style="height: 320px;">
+                <canvas id="quizScoreChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    // Plan Generation Loading Spinner
+    const planForm = document.getElementById("plan-gen-form");
+    const planSpinner = document.getElementById("plan-loading-spinner");
+    const planBtn = document.getElementById("btn-gen-plan");
+
+    if (planForm && planSpinner && planBtn) {
+        planForm.addEventListener("submit", function () {
+            planSpinner.style.display = "block";
+            planBtn.disabled = true;
+            planBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status"></span>Synthesizing Roadmap...';
+        });
+    }
+
+    // Chart.js Setup
+    const chartCanvas = document.getElementById("quizScoreChart");
+    if (chartCanvas) {
+        const rawChartData = {{ (chart_data or {})|tojson }};
+        const ctx = chartCanvas.getContext("2d");
+
+        new Chart(ctx, {
+            type: "bar",
+            data: rawChartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 100,
+                        ticks: {
+                            callback: function(value) { return value + "%"; }
+                        },
+                        title: {
+                            display: true,
+                            text: "Average Score (%)"
+                        }
+                    },
+                    x: {
+                        ticks: {
+                            autoSkip: false,
+                            maxRotation: 45,
+                            minRotation: 25
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return "Score: " + context.parsed.y + "%";
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
+{% endblock %}

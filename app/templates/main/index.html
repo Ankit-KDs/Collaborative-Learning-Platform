@@ -1,0 +1,201 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5">
+    <!-- Hero Banner -->
+    <div class="row align-items-center g-5 py-4">
+        <div class="col-12 col-lg-7">
+            <span
+                class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-2 rounded-pill fw-semibold mb-3">
+                <i class="bi bi-stars me-1 text-warning"></i> Next-Gen College Academic Hub
+            </span>
+            <h1 class="display-4 fw-extrabold text-dark tracking-tight mb-3">
+                AI-Powered <span class="text-primary">Collaborative Learning</span> &amp; Doubt Resolution
+            </h1>
+            <p class="lead text-muted mb-4">
+                Connect with classmates whose strengths match your weak areas. Resolve complex academic doubts with
+                crowdsourced peer answers, teacher-verified solutions, and intelligent Gemini AI assistance.
+            </p>
+            <div class="d-flex flex-wrap gap-3">
+                <a href="{{ url_for('auth.register') }}"
+                    class="btn btn-primary btn-lg rounded-pill px-4 shadow fw-semibold">
+                    <i class="bi bi-person-plus-fill me-2"></i> Join as Student or Teacher
+                </a>
+                <a href="{{ url_for('auth.login') }}"
+                    class="btn btn-outline-secondary btn-lg rounded-pill px-4 fw-semibold">
+                    <i class="bi bi-box-arrow-in-right me-2"></i> Sign In
+                </a>
+                <a href="{{ url_for('main.leaderboard') }}"
+                    class="btn btn-light btn-lg rounded-pill px-4 fw-semibold border shadow-sm">
+                    <i class="bi bi-trophy-fill me-2 text-warning"></i> View Leaderboard
+                </a>
+            </div>
+
+            <!-- Trust / Feature Badges -->
+            <div class="row g-3 mt-4 pt-2">
+                <div class="col-6 col-md-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-check2-circle text-primary fs-5"></i>
+                        <span class="small fw-semibold text-secondary">Peer Matching</span>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-check2-circle text-primary fs-5"></i>
+                        <span class="small fw-semibold text-secondary">Anonymous Doubts</span>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-check2-circle text-primary fs-5"></i>
+                        <span class="small fw-semibold text-secondary">Faculty Verified</span>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <i class="bi bi-check2-circle text-primary fs-5"></i>
+                        <span class="small fw-semibold text-secondary">Aho-Corasick Safe</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hero Card Illustration -->
+        <div class="col-12 col-lg-5">
+            <div class="card card-modern p-4 shadow-lg border-0 bg-white">
+                <div class="d-flex align-items-center justify-content-between mb-3 border-bottom pb-3">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-success rounded-circle p-2"></span>
+                        <span class="fw-bold small text-dark">Production Full-Stack Architecture</span>
+                    </div>
+                    <span class="badge bg-success-subtle text-success border border-success-subtle">Ready</span>
+                </div>
+
+                <div class="d-flex flex-column gap-3">
+                    <div class="p-3 bg-light rounded-3 d-flex align-items-center gap-3">
+                        <div class="stat-icon stat-icon-blue">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold small">Complementary Buddy Match</div>
+                            <div class="text-muted small">Pairs your Weak subjects with peer Strong helpers</div>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 d-flex align-items-center gap-3">
+                        <div class="stat-icon stat-icon-emerald">
+                            <i class="bi bi-chat-quote-fill"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold small">Hand-Ranked Doubt Resolution</div>
+                            <div class="text-muted small">Merge-sort answer rankings with faculty verification</div>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 d-flex align-items-center gap-3">
+                        <div class="stat-icon stat-icon-amber">
+                            <i class="bi bi-lightning-charge-fill"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold small">Gemini AI Academic Assistant</div>
+                            <div class="text-muted small">Socratic hints, instant quizzes &amp; adaptive learning paths
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="p-3 bg-light rounded-3 d-flex align-items-center gap-3">
+                        <div class="stat-icon stat-icon-purple">
+                            <i class="bi bi-shield-check"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold small">Content Moderation &amp; Exam Mode</div>
+                            <div class="text-muted small">Aho-Corasick bad words filter &amp; quick exam revision</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-4 pt-2 text-center">
+                    <a href="{{ url_for('auth.register') }}" class="btn btn-primary w-100 rounded-3 fw-semibold py-2">
+                        Create Your Free Account
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4 Core Feature Pillars -->
+    <div class="row g-4 mt-5 pt-3">
+        <div class="col-12 text-center mb-3">
+            <span class="badge bg-light text-primary border px-3 py-1 rounded-pill fw-semibold">Platform
+                Capabilities</span>
+            <h2 class="fw-bold text-dark mt-2">Engineered for Academic Excellence</h2>
+            <p class="text-muted">Explore the four core pillars that make learning collaborative, efficient, and secure.
+            </p>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card card-modern h-100 p-4 border-0 shadow-sm card-hover">
+                <div class="stat-icon stat-icon-blue mb-3">
+                    <i class="bi bi-diagram-3-fill"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-2">Smart Peer Matching</h5>
+                <p class="text-muted small mb-3">
+                    Greedy bipartite matching with load-balancing ensures students with weak topics get connected to
+                    strong helpers without overloading top students.
+                </p>
+                <div class="mt-auto">
+                    <span class="badge bg-light text-secondary border">Greedy Algorithm</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card card-modern h-100 p-4 border-0 shadow-sm card-hover">
+                <div class="stat-icon stat-icon-emerald mb-3">
+                    <i class="bi bi-question-diamond-fill"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-2">Ranked Doubt Forum</h5>
+                <p class="text-muted small mb-3">
+                    Ask doubts with optional anonymity. Classmate answers are ranked using a custom merge-sort
+                    comparator prioritizing verified and accepted answers.
+                </p>
+                <div class="mt-auto">
+                    <span class="badge bg-light text-secondary border">Merge Sort &amp; KMP</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card card-modern h-100 p-4 border-0 shadow-sm card-hover">
+                <div class="stat-icon stat-icon-amber mb-3">
+                    <i class="bi bi-cpu-fill"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-2">AI Study Tools</h5>
+                <p class="text-muted small mb-3">
+                    Get instantaneous Socratic hints without spoiling full solutions. Generate practice quizzes and
+                    personalized learning roadmaps based on weak areas.
+                </p>
+                <div class="mt-auto">
+                    <span class="badge bg-light text-secondary border">Gemini / Groq LLM</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-12 col-md-6 col-lg-3">
+            <div class="card card-modern h-100 p-4 border-0 shadow-sm card-hover">
+                <div class="stat-icon stat-icon-purple mb-3">
+                    <i class="bi bi-shield-shaded"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-2">Moderated Groups</h5>
+                <p class="text-muted shallow-sm mb-3">
+                    Small study groups (3-5 students), multi-pattern Aho-Corasick profanity filtering, teacher review
+                    queues, and rapid Exam Mode topic reviews.
+                </p>
+                <div class="mt-auto">
+                    <span class="badge bg-light text-secondary border">Aho-Corasick Automaton</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

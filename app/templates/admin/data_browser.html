@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block title %}Database Browser - CollabLearn Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-lg-4">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h2 class="h3 fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                <i class="bi bi-database-fill text-success"></i>
+                Database Explorer
+            </h2>
+            <p class="text-muted small mb-0">Read-only introspective viewer across all platform data models.</p>
+        </div>
+        <div>
+            <a href="{{ url_for('admin.exports') }}" class="btn btn-outline-primary btn-sm rounded-pill">
+                <i class="bi bi-download me-1"></i> Data Export Center
+            </a>
+        </div>
+    </div>
+
+    <!-- Privacy & Redaction Banner -->
+    <div class="alert alert-info border-0 shadow-sm rounded-4 p-3 mb-4 d-flex align-items-start gap-3">
+        <i class="bi bi-shield-check fs-4 text-info mt-1"></i>
+        <div class="small">
+            <h6 class="fw-bold mb-1">Strict Privacy &amp; Credential Protection Active</h6>
+            <p class="mb-0">
+                Sensitive authentication material (such as <code>password_hash</code>, API keys, and session tokens) is permanently redacted and never displayed or exported.
+                Private chat communications are masked by default (<code>[hidden: privacy]</code>) unless explicitly overridden by configuration, with every view strictly audited.
+            </p>
+        </div>
+    </div>
+
+    <!-- Table Cards Grid -->
+    <div class="row g-3">
+        {% for t in tables %}
+        <div class="col-12 col-sm-6 col-lg-4 col-xl-3">
+            <div class="card border-0 shadow-sm rounded-4 h-100 hover-shadow transition-all">
+                <div class="card-body p-3 d-flex flex-column justify-content-between">
+                    <div>
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <span class="badge bg-light text-primary border font-monospace">{{ t.table_name }}</span>
+                            <span class="badge bg-secondary-subtle text-secondary px-2 py-1">{{ t.row_count }} rows</span>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-1">{{ t.model_name }}</h5>
+                        <p class="text-muted small mb-3">
+                            {% if t.table_name == 'users' %}
+                                User accounts, authentication status, academic profile.
+                            {% elif t.table_name == 'doubts' %}
+                                Student questions, subject taxonomy, accepted answers.
+                            {% elif t.table_name == 'answers' %}
+                                Peer solutions, upvote counts, verification status.
+                            {% elif t.table_name == 'messages' %}
+                                Real-time communications with privacy enforcement.
+                            {% elif t.table_name == 'chat_rooms' %}
+                                Direct peer chat channels and study group registries.
+                            {% elif t.table_name == 'admin_audit_logs' %}
+                                Append-only administrative activity and action logs.
+                            {% elif t.table_name == 'moderation_logs' %}
+                                Automated content violations &amp; keyword hits.
+                            {% else %}
+                                Operational record collection for {{ t.model_name }}.
+                            {% endif %}
+                        </p>
+                    </div>
+
+                    <div class="d-flex gap-2 pt-2 border-top">
+                        <a href="{{ url_for('admin.data_table', table_name=t.table_name) }}" class="btn btn-sm btn-primary flex-grow-1 rounded-pill">
+                            <i class="bi bi-table me-1"></i> View Rows
+                        </a>
+                        <a href="{{ url_for('admin.export_table', table_name=t.table_name) }}" class="btn btn-sm btn-outline-secondary rounded-pill" title="Export Table CSV">
+                            <i class="bi bi-file-earmark-arrow-down"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,318 @@
+{% extends "base.html" %}
+
+{% block title %}Safety & Content Reports - CollabLearn Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-lg-4">
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h2 class="h3 fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                <i class="bi bi-flag-fill text-danger"></i>
+                Platform Safety &amp; Moderation Reports
+            </h2>
+            <p class="text-muted small mb-0">Centralized visibility into user reports, automated keyword triggers, and repeat infractions.</p>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('admin.export_file', export_type='reports') }}" class="btn btn-outline-danger btn-sm rounded-pill">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i> Export Reports CSV
+            </a>
+            <a href="{{ url_for('moderation.index') }}" class="btn btn-primary btn-sm rounded-pill">
+                <i class="bi bi-shield-check me-1"></i> Open Moderation Queue
+            </a>
+        </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <ul class="nav nav-pills mb-4 bg-white p-2 rounded-4 shadow-sm border" id="reportsTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <a class="nav-link rounded-pill {% if active_tab == 'reports' %}active{% endif %}" href="{{ url_for('admin.reports', tab='reports') }}">
+                <i class="bi bi-flag me-1"></i> Message Reports ({{ reports_total }})
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link rounded-pill {% if active_tab == 'autoflagged' %}active{% endif %}" href="{{ url_for('admin.reports', tab='autoflagged') }}">
+                <i class="bi bi-robot me-1"></i> Auto-Flagged ({{ flagged_total }})
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link rounded-pill {% if active_tab == 'blocked' %}active{% endif %}" href="{{ url_for('admin.reports', tab='blocked') }}">
+                <i class="bi bi-slash-circle me-1"></i> Blocked Submissions
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link rounded-pill {% if active_tab == 'offenders' %}active{% endif %}" href="{{ url_for('admin.reports', tab='offenders') }}">
+                <i class="bi bi-exclamation-triangle me-1"></i> Repeat Offenders
+            </a>
+        </li>
+        <li class="nav-item" role="presentation">
+            <a class="nav-link rounded-pill {% if active_tab == 'health' %}active{% endif %}" href="{{ url_for('admin.reports', tab='health') }}">
+                <i class="bi bi-heart-pulse me-1"></i> Doubt Health
+            </a>
+        </li>
+    </ul>
+
+    <!-- Tab 1: Message Reports -->
+    {% if active_tab == 'reports' %}
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-white border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0 text-dark">User-Submitted Reports</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-uppercase text-muted">
+                    <tr>
+                        <th class="ps-4">Report ID</th>
+                        <th>Reporter</th>
+                        <th>Message Author</th>
+                        <th>Reason</th>
+                        <th>Note</th>
+                        <th>Status</th>
+                        <th class="text-end pe-4">Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if msg_reports %}
+                        {% for r in msg_reports %}
+                        <tr>
+                            <td class="ps-4 font-monospace">#{{ r.report.id }}</td>
+                            <td>
+                                {% if r.reporter %}
+                                    <a href="{{ url_for('admin.user_detail_view', user_id=r.reporter.id) }}" class="text-decoration-none text-dark fw-medium">
+                                        {{ r.reporter.name }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Deleted User</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if r.author %}
+                                    <a href="{{ url_for('admin.user_detail_view', user_id=r.author.id) }}" class="text-decoration-none text-dark fw-medium">
+                                        {{ r.author.name }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Deleted User</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ r.report.reason }}</span></td>
+                            <td class="small text-muted">{{ r.report.note or '-' }}</td>
+                            <td>
+                                {% if r.message %}
+                                    <span class="badge bg-light text-dark border">{{ r.message.review_status }}</span>
+                                {% else %}
+                                    <span class="text-muted small">No message</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4 small text-muted">{{ r.report.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="bi bi-shield-check fs-1 text-success d-block mb-2"></i>
+                                <h6 class="fw-semibold">No message reports</h6>
+                                <p class="small mb-0">There are currently zero user-submitted message reports.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab 2: Auto-Flagged Messages -->
+    {% elif active_tab == 'autoflagged' %}
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-white border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
+            <h5 class="fw-bold mb-0 text-dark">Automated Keyword &amp; Aho-Corasick Triggers</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-uppercase text-muted">
+                    <tr>
+                        <th class="ps-4">Msg ID</th>
+                        <th>Sender</th>
+                        <th>Trigger Reason</th>
+                        <th>Masked Body</th>
+                        <th>Review Status</th>
+                        <th class="text-end pe-4">Sent At</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if auto_flagged %}
+                        {% for item in auto_flagged %}
+                        <tr>
+                            <td class="ps-4 font-monospace">#{{ item.message.id }}</td>
+                            <td>
+                                {% if item.sender %}
+                                    <a href="{{ url_for('admin.user_detail_view', user_id=item.sender.id) }}" class="text-decoration-none text-dark fw-medium">
+                                        {{ item.sender.name }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Deleted User</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-warning text-dark">{{ item.message.flag_reason }}</span></td>
+                            <td class="small font-monospace">{{ item.message.text }}</td>
+                            <td>
+                                {% if item.message.review_status == 'pending' %}
+                                    <span class="badge bg-warning">Pending Review</span>
+                                {% elif item.message.review_status == 'confirmed' %}
+                                    <span class="badge bg-danger">Confirmed Violation</span>
+                                {% elif item.message.review_status == 'dismissed' %}
+                                    <span class="badge bg-success">Dismissed / Safe</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ item.message.review_status }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-end pe-4 small text-muted">{{ item.message.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="6" class="text-center py-5 text-muted">
+                                <i class="bi bi-check-circle fs-1 text-success d-block mb-2"></i>
+                                <h6 class="fw-semibold">No auto-flagged messages</h6>
+                                <p class="small mb-0">No messages have been intercepted by the automated keyword filters.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab 3: Blocked Submissions Summary -->
+    {% elif active_tab == 'blocked' %}
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-white border-0 pt-3 px-4">
+            <h5 class="fw-bold mb-0 text-dark">Blocked Content Submissions (ModerationLog Summary)</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-uppercase text-muted">
+                    <tr>
+                        <th class="ps-4">Source Category</th>
+                        <th>Action Taken</th>
+                        <th class="text-end pe-4">Incident Count</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if blocked_submissions %}
+                        {% for row in blocked_submissions %}
+                        <tr>
+                            <td class="ps-4 fw-medium text-capitalize">{{ row.source }}</td>
+                            <td><span class="badge bg-secondary">{{ row.action }}</span></td>
+                            <td class="text-end pe-4 fw-bold">{{ row.count }}</td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="3" class="text-center py-5 text-muted">
+                                <i class="bi bi-shield-check fs-1 text-success d-block mb-2"></i>
+                                <h6 class="fw-semibold">Zero blocked submissions</h6>
+                                <p class="small mb-0">No content submissions have been blocked by safety filters.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab 4: Repeat Offenders -->
+    {% elif active_tab == 'offenders' %}
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-white border-0 pt-3 px-4">
+            <h5 class="fw-bold mb-0 text-dark">Accounts with Moderation Strikes</h5>
+        </div>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light small text-uppercase text-muted">
+                    <tr>
+                        <th class="ps-4">User</th>
+                        <th>Role</th>
+                        <th>Account Status</th>
+                        <th>Active Strikes</th>
+                        <th class="text-end pe-4">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% if repeat_offenders %}
+                        {% for u in repeat_offenders %}
+                        <tr>
+                            <td class="ps-4">
+                                <div class="fw-bold">
+                                    <a href="{{ url_for('admin.user_detail_view', user_id=u.id) }}" class="text-decoration-none text-dark">
+                                        {{ u.name }}
+                                    </a>
+                                </div>
+                                <div class="small text-muted">{{ u.email }}</div>
+                            </td>
+                            <td><span class="badge bg-light text-dark border text-capitalize">{{ u.role }}</span></td>
+                            <td>
+                                {% if u.is_active %}
+                                    <span class="badge bg-success">Active</span>
+                                {% else %}
+                                    <span class="badge bg-danger">Deactivated</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge bg-danger fs-6 px-2 py-1">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> {{ u.moderation_strikes }} strikes
+                                </span>
+                            </td>
+                            <td class="text-end pe-4">
+                                <a href="{{ url_for('admin.user_detail_view', user_id=u.id) }}" class="btn btn-sm btn-outline-primary rounded-pill">
+                                    Review User Profile
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% else %}
+                        <tr>
+                            <td colspan="5" class="text-center py-5 text-muted">
+                                <i class="bi bi-emoji-smile fs-1 text-success d-block mb-2"></i>
+                                <h6 class="fw-semibold">No repeat offenders</h6>
+                                <p class="small mb-0">All registered platform users currently have zero moderation strikes.</p>
+                            </td>
+                        </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Tab 5: Doubt Health -->
+    {% elif active_tab == 'health' %}
+    <div class="card border-0 shadow-sm rounded-4 p-4 mb-4">
+        <h5 class="fw-bold text-dark mb-3">Academic Doubts &amp; Resolution Health</h5>
+        <div class="row g-3 text-center mb-4">
+            <div class="col-12 col-md-4">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="fs-4 fw-bold text-dark">{{ doubt_summary.total_doubts }}</div>
+                    <div class="small text-muted">Total Doubts Logged</div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="fs-4 fw-bold text-warning">{{ doubt_summary.unanswered_count }}</div>
+                    <div class="small text-muted">Unanswered Doubts (0 Answers)</div>
+                </div>
+            </div>
+            <div class="col-12 col-md-4">
+                <div class="p-3 bg-light rounded-3">
+                    <div class="fs-4 fw-bold text-danger">{{ doubt_summary.stale_count }}</div>
+                    <div class="small text-muted">Stale Doubts (> 7 Days Open)</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-light border small text-muted mb-0">
+            <i class="bi bi-lightbulb-fill text-warning me-1"></i>
+            <strong>Proactive Intervention:</strong> Unanswered and stale doubts can be escalated to subject faculty or paired with peer helpers via the Matching algorithm.
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

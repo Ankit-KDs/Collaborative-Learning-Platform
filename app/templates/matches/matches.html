@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+
+    <!-- Header Banner -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card card-modern p-4 bg-white border-0 shadow-sm">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <h2 class="fw-bold mb-0 text-dark">Study Buddy Matching</h2>
+                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1">
+                                Peer Study Buddies
+                            </span>
+                        </div>
+                        <p class="text-muted mb-0 small">
+                            Intelligent Bipartite Matching with Greedy Load-Balancing &bull; Connect with peers who complement your skills
+                        </p>
+                    </div>
+                    <div>
+                        <a href="{{ url_for('profile.profile') }}" class="btn btn-outline-primary rounded-pill px-3 shadow-sm fw-semibold">
+                            <i class="bi bi-sliders me-1"></i> Update Your Skills
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Teacher Notice Banner (If Teacher) -->
+    {% if is_teacher %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card card-modern p-5 text-center bg-white border-0 shadow-sm">
+                <div class="stat-icon stat-icon-amber mx-auto mb-3" style="width: 64px; height: 64px; font-size: 2rem;">
+                    <i class="bi bi-mortarboard"></i>
+                </div>
+                <h4 class="fw-bold mb-2">Faculty Account Information</h4>
+                <p class="text-muted col-md-8 mx-auto mb-4">
+                    Peer study buddy matching is tailored specifically for students seeking mutual academic support. As a teacher, you have access to dashboard overviews, student doubt resolution, and answer verification in our upcoming community modules.
+                </p>
+                <div>
+                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="bi bi-arrow-left me-1"></i> Return to Dashboard
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% elif not has_skills %}
+    <!-- Empty State: No Skills Defined Yet -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card card-modern p-5 text-center bg-white border-0 shadow-sm">
+                <div class="stat-icon stat-icon-blue mx-auto mb-3" style="width: 64px; height: 64px; font-size: 2rem;">
+                    <i class="bi bi-lightning-charge"></i>
+                </div>
+                <h4 class="fw-bold mb-2">No Subject Skills Set Yet</h4>
+                <p class="text-muted col-md-8 mx-auto mb-4">
+                    To receive tailored study buddy recommendations, please tell us which subjects you find challenging (<strong>Weak</strong>) and which subjects you excel in (<strong>Strong</strong>).
+                </p>
+                <div>
+                    <a href="{{ url_for('profile.profile') }}" class="btn btn-primary rounded-pill px-4 fw-semibold shadow-sm">
+                        <i class="bi bi-plus-circle me-1"></i> Set Your Skills in Profile
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+
+    <!-- SECTION 1: Your Weak Subjects & Suggested Helpers -->
+    <div class="row mb-5">
+        <div class="col-12">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="stat-icon stat-icon-blue" style="width: 38px; height: 38px; font-size: 1.2rem;">
+                        <i class="bi bi-people-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold mb-0">Your Weak Subjects &bull; Suggested Helpers</h4>
+                        <div class="text-muted small">Peers rated <strong>Strong</strong> in subjects where you need help</div>
+                    </div>
+                </div>
+            </div>
+
+            {% if matches %}
+                {% for item in matches %}
+                <div class="card card-modern p-4 mb-4">
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3 border-bottom pb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-danger px-3 py-1">Weak</span>
+                            <h5 class="fw-bold mb-0 text-dark">{{ item.subject }}</h5>
+                        </div>
+                        <span class="badge bg-secondary-subtle text-secondary border">
+                            {{ item.total_available }} {{ 'Helper' if item.total_available == 1 else 'Helpers' }} Available
+                        </span>
+                    </div>
+
+                    {% if item.helpers %}
+                    <div class="row g-3">
+                        {% for helper_data in item.helpers %}
+                        {% set helper = helper_data.user %}
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="card border rounded-3 p-3 h-100 card-hover bg-light bg-opacity-25 d-flex flex-column justify-content-between">
+                                <div>
+                                    <!-- Card Header: Name and Load Status -->
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <div class="brand-icon-box bg-primary text-white" style="width: 38px; height: 38px; font-size: 1.1rem;">
+                                                <i class="bi bi-person"></i>
+                                            </div>
+                                            <div>
+                                                <h6 class="fw-bold mb-0 text-dark">{{ helper.name }}</h6>
+                                                <span class="text-muted small">Year {{ helper.year }} &bull; {{ helper.branch }}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Attribute Tags & Match Tiebreakers -->
+                                    <div class="d-flex flex-wrap gap-1 my-3">
+                                        <!-- Load Status Badge -->
+                                        {% if helper_data.load_status == 'Available' %}
+                                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                                <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem;"></i>Available (Load: {{ helper_data.load }})
+                                            </span>
+                                        {% else %}
+                                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle">
+                                                <i class="bi bi-clock-fill me-1" style="font-size: 0.6rem;"></i>Busy (Load: {{ helper_data.load }})
+                                            </span>
+                                        {% endif %}
+
+                                        <!-- Homophily Badges -->
+                                        {% if helper_data.same_branch %}
+                                            <span class="badge bg-primary-subtle text-primary border border-primary-subtle" title="Same Department">
+                                                <i class="bi bi-diagram-2 me-1"></i>Same Branch
+                                            </span>
+                                        {% endif %}
+                                        {% if helper_data.same_year %}
+                                            <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle" title="Same Academic Year">
+                                                <i class="bi bi-calendar3 me-1"></i>Same Year
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <!-- Action Button: Send Request or Request Sent -->
+                                <div class="mt-2 pt-2 border-top">
+                                    {% if helper_data.request_sent %}
+                                        <button type="button" class="btn btn-secondary btn-sm rounded-pill w-100 fw-semibold disabled" disabled>
+                                            <i class="bi bi-clock-history me-1"></i> Request Sent
+                                        </button>
+                                    {% else %}
+                                        <form method="POST" action="{{ url_for('requests.send_request') }}">
+                                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                            <input type="hidden" name="receiver_id" value="{{ helper.id }}">
+                                            <input type="hidden" name="subject" value="{{ item.subject }}">
+                                            <button type="submit" class="btn btn-outline-primary btn-sm rounded-pill w-100 fw-semibold">
+                                                <i class="bi bi-person-plus me-1"></i> Send Request
+                                            </button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="p-3 bg-light rounded-3 text-muted small text-center">
+                        <i class="bi bi-info-circle me-1"></i> No available study buddies found for {{ item.subject }} at this time. All helpers may be at capacity (Load &ge; 3) or not yet registered.
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="card card-modern p-4 text-center bg-white border-0 shadow-sm">
+                <div class="stat-icon stat-icon-emerald mx-auto mb-2" style="width: 48px; height: 48px; font-size: 1.4rem;">
+                    <i class="bi bi-check2-all"></i>
+                </div>
+                <h5 class="fw-bold mb-1">No Weak Subjects Found</h5>
+                <p class="text-muted small mb-3">You have not marked any subjects as <strong>Weak</strong> in your profile.</p>
+                <div>
+                    <a href="{{ url_for('profile.profile') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                        Edit Subject Skills
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- SECTION 2: Students You Can Help (Reverse View) -->
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <div class="stat-icon stat-icon-emerald" style="width: 38px; height: 38px; font-size: 1.2rem;">
+                        <i class="bi bi-heart-pulse-fill"></i>
+                    </div>
+                    <div>
+                        <h4 class="fw-bold mb-0">Students You Can Help</h4>
+                        <div class="text-muted small">Peers seeking assistance in your <strong>Strong</strong> subjects (Informational)</div>
+                    </div>
+                </div>
+            </div>
+
+            {% if help_opportunities %}
+                {% for opp in help_opportunities %}
+                <div class="card card-modern p-4 mb-4">
+                    <div class="d-flex flex-column flex-sm-row justify-content-between align-items-sm-center gap-2 mb-3 border-bottom pb-3">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-success px-3 py-1">Your Strength</span>
+                            <h5 class="fw-bold mb-0 text-dark">{{ opp.subject }}</h5>
+                        </div>
+                        <span class="badge bg-secondary-subtle text-secondary border">
+                            {{ opp.total_seekers }} {{ 'Peer' if opp.total_seekers == 1 else 'Peers' }} Seeking Help
+                        </span>
+                    </div>
+
+                    {% if opp.seekers %}
+                    <div class="row g-3">
+                        {% for seeker_data in opp.seekers %}
+                        {% set seeker = seeker_data.user %}
+                        <div class="col-12 col-md-6 col-lg-4">
+                            <div class="border rounded-3 p-3 bg-light bg-opacity-25 h-100 card-hover">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <div class="brand-icon-box bg-secondary-subtle text-secondary" style="width: 34px; height: 34px; font-size: 1rem;">
+                                        <i class="bi bi-person"></i>
+                                    </div>
+                                    <div>
+                                        <h6 class="fw-bold mb-0 text-dark">{{ seeker.name }}</h6>
+                                        <span class="text-muted small">Year {{ seeker.year }} &bull; {{ seeker.branch }}</span>
+                                    </div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-1 mt-2">
+                                    <span class="badge bg-danger-subtle text-danger border border-danger-subtle">
+                                        Needs Help in {{ opp.subject }}
+                                    </span>
+                                    {% if seeker_data.same_branch %}
+                                        <span class="badge bg-primary-subtle text-primary border border-primary-subtle">Same Branch</span>
+                                    {% endif %}
+                                    {% if seeker_data.same_year %}
+                                        <span class="badge bg-info-subtle text-info-emphasis border border-info-subtle">Same Year</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    {% else %}
+                    <div class="p-3 bg-light rounded-3 text-muted small text-center">
+                        <i class="bi bi-info-circle me-1"></i> No classmates currently marked as Weak in {{ opp.subject }}.
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            {% else %}
+            <div class="card card-modern p-4 text-center bg-white border-0 shadow-sm">
+                <div class="stat-icon stat-icon-amber mx-auto mb-2" style="width: 48px; height: 48px; font-size: 1.4rem;">
+                    <i class="bi bi-stars"></i>
+                </div>
+                <h5 class="fw-bold mb-1">No Strong Subjects Configured</h5>
+                <p class="text-muted small mb-3">Mark subjects where you excel as <strong>Strong</strong> in your profile to discover classmates you can help.</p>
+                <div>
+                    <a href="{{ url_for('profile.profile') }}" class="btn btn-sm btn-outline-primary rounded-pill px-3">
+                        Set Strong Subjects
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

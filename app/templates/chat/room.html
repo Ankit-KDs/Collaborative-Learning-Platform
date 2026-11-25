@@ -1,0 +1,250 @@
+{% extends "base.html" %}
+
+{% block extra_head %}
+<meta name="csrf-token" content="{{ csrf_token() }}">
+<style>
+    .chat-container {
+        height: 520px;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+        padding: 1rem;
+        background-color: #f8fafc;
+        border-radius: 12px;
+    }
+
+    .message-row {
+        display: flex;
+        flex-direction: column;
+        max-width: 75%;
+    }
+
+    .message-row.self {
+        align-self: flex-end;
+        align-items: flex-end;
+    }
+
+    .message-row.other {
+        align-self: flex-start;
+        align-items: flex-start;
+    }
+
+    .message-bubble {
+        padding: 0.65rem 0.95rem;
+        border-radius: 16px;
+        word-break: break-word;
+        font-size: 0.935rem;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .message-row.self .message-bubble {
+        background-color: #2563eb;
+        color: #ffffff;
+        border-bottom-right-radius: 4px;
+    }
+
+    .message-row.other .message-bubble {
+        background-color: #ffffff;
+        color: #1e293b;
+        border: 1px solid #e2e8f0;
+        border-bottom-left-radius: 4px;
+    }
+
+    .message-meta {
+        font-size: 0.72rem;
+        margin-top: 0.2rem;
+        padding: 0 0.25rem;
+    }
+
+    .message-row.self .message-meta {
+        color: #64748b;
+    }
+
+    .message-row.other .message-meta {
+        color: #64748b;
+    }
+
+    .chat-img-thumb {
+        max-width: 260px;
+        max-height: 200px;
+        object-fit: cover;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: opacity 0.15s ease;
+    }
+
+    .chat-img-thumb:hover {
+        opacity: 0.92;
+    }
+
+    .preview-box {
+        background-color: #f1f5f9;
+        border-radius: 8px;
+        padding: 0.4rem 0.6rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-3">
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-9">
+
+            <!-- Chat Room Card -->
+            <div class="card card-modern border-0 shadow-sm bg-white overflow-hidden">
+
+                <!-- Room Header -->
+                <div class="p-3 border-bottom bg-white d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-3">
+                        <a href="{{ url_for('chat.list_chats') }}" class="btn btn-outline-secondary btn-sm rounded-circle d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;" title="Back to Chats">
+                            <i class="bi bi-arrow-left"></i>
+                        </a>
+                        <div class="brand-icon-box bg-primary text-white" style="width: 42px; height: 42px; font-size: 1.2rem;">
+                            <i class="bi bi-person"></i>
+                        </div>
+                        <div>
+                            <div class="d-flex align-items-center gap-2">
+                                <h5 class="fw-bold mb-0 text-dark">{{ other_user.name if other_user else 'Study Partner' }}</h5>
+                                {% if room.subject %}
+                                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle">
+                                        {{ room.subject }}
+                                    </span>
+                                {% endif %}
+                            </div>
+                            <div class="text-muted small">
+                                {% if other_user %}
+                                    <span>{{ other_user.branch }} &bull; Year {{ other_user.year }}</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="badge bg-success-subtle text-success border border-success-subtle">
+                            <i class="bi bi-shield-check me-1"></i> Private 1-to-1
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Error Alert Box (Dynamic) -->
+                <div id="chatErrorAlert" class="alert alert-danger alert-dismissible fade show m-3 d-none mb-0" role="alert">
+                    <span id="chatErrorMessage">An error occurred while sending your message.</span>
+                    <button type="button" class="btn-close" onclick="document.getElementById('chatErrorAlert').classList.add('d-none');"></button>
+                </div>
+
+                <!-- Moderation Warning Alert Box (Dynamic) -->
+                <div id="chatWarningAlert" class="alert alert-warning alert-dismissible fade show m-3 d-none mb-0" role="alert">
+                    <i class="bi bi-shield-exclamation me-1"></i> <span id="chatWarningMessage"></span>
+                    <button type="button" class="btn-close" onclick="document.getElementById('chatWarningAlert').classList.add('d-none');"></button>
+                </div>
+
+                <!-- Messages Scroll Area -->
+                <div class="p-3">
+                    <div id="chatMessagesContainer" class="chat-container"
+                         data-room-id="{{ room.id }}"
+                         data-is-group="{{ 'true' if room.is_group else 'false' }}"
+                         data-current-user-id="{{ current_user.id }}"
+                         data-after-id="{{ initial_messages[-1].id if initial_messages else 0 }}">
+
+                        {% if initial_messages %}
+                            {% for msg in initial_messages %}
+                            {% if msg.is_system %}
+                                <div class="text-center my-2" data-message-id="{{ msg.id }}">
+                                    <span class="badge bg-secondary-subtle text-secondary px-3 py-1 rounded-pill small fst-italic border">
+                                        {{ msg.text }}
+                                    </span>
+                                </div>
+                            {% else %}
+                            {% set is_self = (msg.sender_id == current_user.id) %}
+                            <div class="message-row {{ 'self' if is_self else 'other' }}" data-message-id="{{ msg.id }}">
+                                <div class="message-bubble">
+                                    {% if not is_self and room.is_group %}
+                                        <div class="fw-bold small mb-1 text-primary">{{ msg.sender.name if msg.sender else 'Member' }}</div>
+                                    {% endif %}
+                                    
+                                    {% if msg.image_path %}
+                                        <div class="mb-1">
+                                            <a href="{{ url_for('chat.get_message_image', room_id=room.id, message_id=msg.id) }}" target="_blank">
+                                                <img src="{{ url_for('chat.get_message_image', room_id=room.id, message_id=msg.id) }}" alt="Attached photo" class="chat-img-thumb border shadow-sm">
+                                            </a>
+                                        </div>
+                                    {% endif %}
+
+                                    {% if msg.text %}
+                                        <div class="message-text {% if msg.text == '[message hidden pending review]' %}text-muted fst-italic{% endif %}">{{ msg.text }}</div>
+                                    {% endif %}
+                                </div>
+                                <div class="message-meta d-flex align-items-center gap-2">
+                                    <span>{{ msg.created_at.strftime('%I:%M %p') }}</span>
+                                    {% if not is_self and not msg.is_system %}
+                                        <button type="button" class="btn btn-link btn-sm text-muted p-0 report-trigger-btn" title="Report message" data-msg-id="{{ msg.id }}">
+                                            <i class="bi bi-flag" style="font-size: 0.75rem;"></i>
+                                        </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            <div id="emptyChatNotice" class="text-center py-5 my-auto text-muted">
+                                <div class="brand-icon-box bg-secondary-subtle text-secondary mx-auto mb-2" style="width: 48px; height: 48px; font-size: 1.3rem;">
+                                    <i class="bi bi-chat-quote"></i>
+                                </div>
+                                <h6 class="fw-bold mb-1">Study Room Unlocked!</h6>
+                                <p class="small mb-0">Send a greeting, ask a question, or attach a problem diagram to get started.</p>
+                            </div>
+                        {% endif %}
+
+                    </div>
+                </div>
+
+                <!-- Image Attachment Preview Thumbnail Bar -->
+                <div id="imagePreviewBar" class="px-3 pb-2 d-none">
+                    <div class="preview-box d-flex align-items-center justify-content-between border">
+                        <div class="d-flex align-items-center gap-2 text-truncate">
+                            <i class="bi bi-file-earmark-image-fill text-primary fs-5"></i>
+                            <span id="previewFilename" class="small fw-semibold text-truncate" style="max-width: 300px;">photo.png</span>
+                            <span id="previewFilesize" class="small text-muted"></span>
+                        </div>
+                        <button type="button" id="clearImageBtn" class="btn btn-sm btn-link text-danger p-0" title="Remove attachment">
+                            <i class="bi bi-x-circle-fill fs-5"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Input Footer Form -->
+                <div class="p-3 border-top bg-light">
+                    <form id="chatForm" autocomplete="off">
+                        <div class="input-group">
+                            <!-- Hidden Image File Input -->
+                            <input type="file" id="chatImageInput" name="image" accept=".jpg,.jpeg,.png" class="d-none">
+
+                            <!-- Paperclip Attachment Trigger -->
+                            <button type="button" id="attachBtn" class="btn btn-outline-secondary" title="Attach JPG/PNG image (max 5MB)">
+                                <i class="bi bi-paperclip fs-5"></i>
+                            </button>
+
+                            <!-- Message Text Input -->
+                            <input type="text" id="chatTextInput" name="text" class="form-control" placeholder="Type your message here... (max 1000 characters)" maxlength="1000" autofocus>
+
+                            <!-- Submit Send Button -->
+                            <button type="submit" id="sendBtn" class="btn btn-primary px-4 fw-semibold">
+                                <i class="bi bi-send-fill me-1"></i> Send
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+</div>
+
+{% include 'chat/_report_modal.html' %}
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}

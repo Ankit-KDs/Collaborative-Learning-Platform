@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+
+{% block title %}{{ table_name }} #{{ row_id }} - CollabLearn Admin{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4 px-lg-4">
+    <!-- Breadcrumb -->
+    <div class="mb-3">
+        <a href="{{ url_for('admin.data_table', table_name=table_name) }}" class="text-decoration-none small text-muted">
+            <i class="bi bi-arrow-left me-1"></i> Back to {{ table_name }} table
+        </a>
+    </div>
+
+    <!-- Header -->
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+        <div>
+            <h2 class="h4 fw-bold mb-1 text-dark d-flex align-items-center gap-2">
+                <span class="font-monospace text-primary">{{ table_name }}</span>
+                <span class="badge bg-secondary">Record #{{ row_id }}</span>
+            </h2>
+            <p class="text-muted small mb-0">Complete row tuple attribute viewer with field-level introspection.</p>
+        </div>
+    </div>
+
+    <!-- Row Attributes Table -->
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
+        <div class="card-header bg-white border-0 pt-3 px-4">
+            <h5 class="fw-bold mb-0 text-dark">Attributes</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-striped table-hover align-middle mb-0">
+                    <thead class="table-light small text-uppercase text-muted">
+                        <tr>
+                            <th class="ps-4 w-25">Field Column</th>
+                            <th>Value</th>
+                        </tr>
+                    </thead>
+                    <tbody class="font-monospace small">
+                        {% for col, val in detail.items() %}
+                        <tr>
+                            <td class="ps-4 fw-bold text-dark font-sans">{{ col }}</td>
+                            <td>
+                                {% if val is none %}
+                                    <span class="text-muted fst-italic">NULL</span>
+                                {% elif val == '[hidden: privacy]' %}
+                                    <span class="badge bg-light text-danger border"><i class="bi bi-eye-slash me-1"></i>[hidden: privacy]</span>
+                                {% elif val is string and '\n' in val %}
+                                    <pre class="bg-light p-2 rounded mb-0 text-dark" style="white-space: pre-wrap; font-family: inherit;">{{ val }}</pre>
+                                {% else %}
+                                    {{ val }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Redaction Disclaimer -->
+    <div class="alert alert-light border small text-muted d-flex align-items-center gap-2 mb-0">
+        <i class="bi bi-shield-lock-fill text-secondary fs-5"></i>
+        <span>
+            <strong>Confidentiality Notice:</strong> Sensitive authentication fields (e.g., credential hashes, API keys, tokens) are filtered by the Data Browser and cannot be rendered.
+        </span>
+    </div>
+</div>
+{% endblock %}

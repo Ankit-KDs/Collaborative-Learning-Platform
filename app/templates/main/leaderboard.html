@@ -1,0 +1,325 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header Banner -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card card-modern p-4 bg-white border-0 shadow-sm">
+                <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle px-3 py-1 rounded-pill">
+                                <i class="bi bi-trophy-fill me-1"></i> Peer Reputation Honors
+                            </span>
+                            <span class="badge bg-light text-muted border">Live Standings</span>
+                        </div>
+                        <h2 class="fw-bold mb-1 text-dark">Platform Academic Leaderboard</h2>
+                        <p class="text-muted mb-0">
+                            Recognizing top peer mentors who resolve classmate doubts and advance collaborative learning.
+                        </p>
+                    </div>
+
+                    <!-- Reputation Scoring Legend -->
+                    <div class="d-flex flex-wrap gap-2 align-items-center">
+                        <span class="badge bg-light text-dark border" title="Given when a peer upvotes your answer">
+                            <i class="bi bi-hand-thumbs-up-fill text-primary me-1"></i> +2 Upvote
+                        </span>
+                        <span class="badge bg-light text-dark border" title="Awarded when the asker accepts your answer">
+                            <i class="bi bi-check-circle-fill text-success me-1"></i> +10 Accepted
+                        </span>
+                        <span class="badge bg-light text-dark border" title="Granted when a teacher verifies your answer">
+                            <i class="bi bi-patch-check-fill text-warning me-1"></i> +15 Faculty Verified
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tier Badges Legend -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card card-modern p-3 bg-light border-0">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <span class="small fw-bold text-secondary">
+                        <i class="bi bi-award-fill me-1 text-primary"></i> Honor Tiers:
+                    </span>
+                    <div class="d-flex flex-wrap gap-2">
+                        <span class="badge badge-guru px-3 py-1">
+                            <i class="bi bi-gem me-1"></i> Guru (60+ pts)
+                        </span>
+                        <span class="badge badge-expert px-3 py-1">
+                            <i class="bi bi-star-fill me-1"></i> Expert (30-59 pts)
+                        </span>
+                        <span class="badge badge-helper px-3 py-1">
+                            <i class="bi bi-patch-check me-1"></i> Helper (10-29 pts)
+                        </span>
+                        <span class="badge badge-learner px-3 py-1">
+                            <i class="bi bi-mortarboard me-1"></i> Learner (&lt;10 pts)
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Subject Filter Tabs -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex flex-wrap gap-2 align-items-center">
+                <a href="{{ url_for('main.leaderboard') }}" class="btn btn-sm rounded-pill px-3 fw-semibold {{ 'btn-primary' if not selected_subject else 'btn-outline-secondary' }}">
+                    <i class="bi bi-globe me-1"></i> Overall Standings
+                </a>
+                {% for subj in subjects %}
+                    <a href="{{ url_for('main.leaderboard', subject=subj) }}" class="btn btn-sm rounded-pill px-3 fw-semibold {{ 'btn-primary' if selected_subject == subj else 'btn-outline-secondary' }}">
+                        {{ subj }}
+                    </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    {% if selected_subject %}
+    <!-- Subject-Specific Leaderboard View -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card card-modern p-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="bi bi-bookmark-star-fill text-primary me-2"></i>
+                        Top Helpers in {{ selected_subject }}
+                    </h5>
+                    <span class="badge bg-primary-subtle text-primary border border-primary-subtle px-3 py-1 rounded-pill">
+                        Subject Specific
+                    </span>
+                </div>
+
+                {% if subject_leaders %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 80px;" class="text-center">Rank</th>
+                                <th>Student Helper</th>
+                                <th>Department</th>
+                                <th>Academic Year</th>
+                                <th class="text-center">Honor Badge</th>
+                                <th class="text-end">Subject Score</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for leader in subject_leaders %}
+                            <tr>
+                                <td class="text-center fw-bold">
+                                    {% if loop.index == 1 %}
+                                        <span class="badge bg-warning text-dark fs-6 rounded-circle p-2 shadow-sm">🥇 1</span>
+                                    {% elif loop.index == 2 %}
+                                        <span class="badge bg-secondary text-white fs-6 rounded-circle p-2 shadow-sm">🥈 2</span>
+                                    {% elif loop.index == 3 %}
+                                        <span class="badge bg-danger-subtle text-danger-emphasis fs-6 rounded-circle p-2 shadow-sm">🥉 3</span>
+                                    {% else %}
+                                        <span class="text-muted">#{{ loop.index }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="stat-icon stat-icon-blue" style="width: 36px; height: 36px; font-size: 1rem;">
+                                            {{ leader.user.name[:2]|upper }}
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ leader.user.name }}</div>
+                                            <div class="text-muted small">{{ leader.user.email }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="text-secondary small fw-semibold">{{ leader.user.branch }}</span></td>
+                                <td><span class="badge bg-light text-dark border">Year {{ leader.user.year }}</span></td>
+                                <td class="text-center">
+                                    {% if leader.badge == 'Guru' %}
+                                        <span class="badge badge-guru"><i class="bi bi-gem me-1"></i> Guru</span>
+                                    {% elif leader.badge == 'Expert' %}
+                                        <span class="badge badge-expert"><i class="bi bi-star-fill me-1"></i> Expert</span>
+                                    {% elif leader.badge == 'Helper' %}
+                                        <span class="badge badge-helper"><i class="bi bi-patch-check me-1"></i> Helper</span>
+                                    {% else %}
+                                        <span class="badge badge-learner"><i class="bi bi-mortarboard me-1"></i> Learner</span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-end fw-bold text-primary fs-5">{{ leader.score }} pts</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="bi bi-journal-x"></i>
+                    </div>
+                    <div class="empty-state-title">No Reputation Points Yet in {{ selected_subject }}</div>
+                    <div class="empty-state-text">
+                        Be the first student to answer doubts in {{ selected_subject }} and earn your Helper badge!
+                    </div>
+                    <a href="{{ url_for('doubts.index', subject=selected_subject) }}" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="bi bi-question-circle me-1"></i> Browse {{ selected_subject }} Doubts
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+    <!-- Overall Podium & Full Leaderboard View -->
+    {% if overall_leaders and overall_leaders|length >= 3 %}
+    <!-- Podium for Top 3 -->
+    <div class="row g-4 mb-4 justify-content-center">
+        <!-- 2nd Place -->
+        <div class="col-12 col-md-4 order-2 order-md-1">
+            <div class="card card-modern p-4 text-center h-100 border-0 shadow-sm bg-white">
+                <div class="mb-2">
+                    <span class="badge bg-secondary text-white px-3 py-1 rounded-pill fw-bold">🥈 2nd Place</span>
+                </div>
+                <div class="stat-icon stat-icon-indigo mx-auto my-3" style="width: 56px; height: 56px; font-size: 1.5rem;">
+                    {{ overall_leaders[1].user.name[:2]|upper }}
+                </div>
+                <h5 class="fw-bold mb-1">{{ overall_leaders[1].user.name }}</h5>
+                <p class="text-muted small mb-2">{{ overall_leaders[1].user.branch }} &bull; Year {{ overall_leaders[1].user.year }}</p>
+                <div class="mb-3">
+                    <span class="badge badge-{{ overall_leaders[1].badge|lower }} px-3 py-1">
+                        {{ overall_leaders[1].badge }}
+                    </span>
+                </div>
+                <div class="h4 fw-bold text-primary mb-0">{{ overall_leaders[1].total_score }} pts</div>
+                <span class="text-muted small">{{ overall_leaders[1].subjects_count }} Subject(s)</span>
+            </div>
+        </div>
+
+        <!-- 1st Place (Champion) -->
+        <div class="col-12 col-md-4 order-1 order-md-2">
+            <div class="card card-modern p-4 text-center h-100 border-warning shadow border-2 bg-white" style="transform: translateY(-8px);">
+                <div class="mb-2">
+                    <span class="badge bg-warning text-dark px-3 py-1 rounded-pill fw-bold">🥇 1st Place Champion</span>
+                </div>
+                <div class="stat-icon stat-icon-amber mx-auto my-3" style="width: 68px; height: 68px; font-size: 1.8rem; box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);">
+                    {{ overall_leaders[0].user.name[:2]|upper }}
+                </div>
+                <h4 class="fw-bold mb-1 text-dark">{{ overall_leaders[0].user.name }}</h4>
+                <p class="text-muted small mb-2">{{ overall_leaders[0].user.branch }} &bull; Year {{ overall_leaders[0].user.year }}</p>
+                <div class="mb-3">
+                    <span class="badge badge-{{ overall_leaders[0].badge|lower }} px-3 py-1">
+                        {{ overall_leaders[0].badge }}
+                    </span>
+                </div>
+                <div class="h3 fw-bold text-primary mb-0">{{ overall_leaders[0].total_score }} pts</div>
+                <span class="text-muted small">{{ overall_leaders[0].subjects_count }} Subject(s) Contributed</span>
+            </div>
+        </div>
+
+        <!-- 3rd Place -->
+        <div class="col-12 col-md-4 order-3 order-md-3">
+            <div class="card card-modern p-4 text-center h-100 border-0 shadow-sm bg-white">
+                <div class="mb-2">
+                    <span class="badge bg-danger-subtle text-danger-emphasis px-3 py-1 rounded-pill fw-bold">🥉 3rd Place</span>
+                </div>
+                <div class="stat-icon stat-icon-blue mx-auto my-3" style="width: 56px; height: 56px; font-size: 1.5rem;">
+                    {{ overall_leaders[2].user.name[:2]|upper }}
+                </div>
+                <h5 class="fw-bold mb-1">{{ overall_leaders[2].user.name }}</h5>
+                <p class="text-muted small mb-2">{{ overall_leaders[2].user.branch }} &bull; Year {{ overall_leaders[2].user.year }}</p>
+                <div class="mb-3">
+                    <span class="badge badge-{{ overall_leaders[2].badge|lower }} px-3 py-1">
+                        {{ overall_leaders[2].badge }}
+                    </span>
+                </div>
+                <div class="h4 fw-bold text-primary mb-0">{{ overall_leaders[2].total_score }} pts</div>
+                <span class="text-muted small">{{ overall_leaders[2].subjects_count }} Subject(s)</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Overall Table -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card card-modern p-4">
+                <h5 class="fw-bold mb-4 text-dark">
+                    <i class="bi bi-list-ol text-primary me-2"></i> All Overall Peer Standings
+                </h5>
+
+                {% if overall_leaders %}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width: 70px;" class="text-center">Rank</th>
+                                <th>Student Helper</th>
+                                <th>Department</th>
+                                <th>Academic Year</th>
+                                <th class="text-center">Highest Badge</th>
+                                <th class="text-center">Subjects</th>
+                                <th class="text-end">Total Reputation</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for leader in overall_leaders %}
+                            <tr>
+                                <td class="text-center fw-bold text-secondary">
+                                    {% if loop.index == 1 %}
+                                        <span class="badge bg-warning text-dark">1</span>
+                                    {% elif loop.index == 2 %}
+                                        <span class="badge bg-secondary text-white">2</span>
+                                    {% elif loop.index == 3 %}
+                                        <span class="badge bg-danger-subtle text-danger-emphasis">3</span>
+                                    {% else %}
+                                        #{{ loop.index }}
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="stat-icon stat-icon-blue" style="width: 36px; height: 36px; font-size: 1rem;">
+                                            {{ leader.user.name[:2]|upper }}
+                                        </div>
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ leader.user.name }}</div>
+                                            <div class="text-muted small">{{ leader.user.email }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td><span class="text-secondary small fw-semibold">{{ leader.user.branch }}</span></td>
+                                <td><span class="badge bg-light text-dark border">Year {{ leader.user.year }}</span></td>
+                                <td class="text-center">
+                                    <span class="badge badge-{{ leader.badge|lower }}">
+                                        {{ leader.badge }}
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-secondary border">{{ leader.subjects_count }} subjects</span>
+                                </td>
+                                <td class="text-end fw-bold text-primary fs-5">{{ leader.total_score }} pts</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="empty-state">
+                    <div class="empty-state-icon">
+                        <i class="bi bi-trophy"></i>
+                    </div>
+                    <div class="empty-state-title">No Reputation Points Earned Yet</div>
+                    <div class="empty-state-text">
+                        The leaderboard will automatically populate as students post quality answers, receive upvotes, and earn faculty verifications.
+                    </div>
+                    <a href="{{ url_for('doubts.index') }}" class="btn btn-primary rounded-pill px-4 fw-semibold">
+                        <i class="bi bi-question-circle me-1"></i> Explore Community Doubts
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
