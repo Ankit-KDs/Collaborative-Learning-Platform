@@ -65,6 +65,7 @@
                         <th class="ps-4">Report ID</th>
                         <th>Reporter</th>
                         <th>Message Author</th>
+                        <th>Message Preview</th>
                         <th>Reason</th>
                         <th>Note</th>
                         <th>Status</th>
@@ -75,7 +76,7 @@
                     {% if msg_reports %}
                         {% for r in msg_reports %}
                         <tr>
-                            <td class="ps-4 font-monospace">#{{ r.report.id }}</td>
+                            <td class="ps-4 font-monospace">#{{ r.id }}</td>
                             <td>
                                 {% if r.reporter %}
                                     <a href="{{ url_for('admin.user_detail_view', user_id=r.reporter.id) }}" class="text-decoration-none text-dark fw-medium">
@@ -86,29 +87,44 @@
                                 {% endif %}
                             </td>
                             <td>
-                                {% if r.author %}
-                                    <a href="{{ url_for('admin.user_detail_view', user_id=r.author.id) }}" class="text-decoration-none text-dark fw-medium">
-                                        {{ r.author.name }}
+                                {% if r.message and r.message.sender %}
+                                    <a href="{{ url_for('admin.user_detail_view', user_id=r.message.sender.id) }}" class="text-decoration-none text-dark fw-medium">
+                                        {{ r.message.sender.name }}
                                     </a>
                                 {% else %}
                                     <span class="text-muted">Deleted User</span>
                                 {% endif %}
                             </td>
-                            <td><span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ r.report.reason }}</span></td>
-                            <td class="small text-muted">{{ r.report.note or '-' }}</td>
+                            <td class="small text-muted" style="max-width: 240px;">
+                                {% if r.message %}
+                                    <span class="d-inline-block text-truncate w-100" title="{{ r.message.text }}">{{ r.message.text }}</span>
+                                {% else %}
+                                    <span class="text-muted">Message removed</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="badge bg-danger-subtle text-danger border border-danger-subtle">{{ r.reason }}</span></td>
+                            <td class="small text-muted">{{ r.note or '-' }}</td>
                             <td>
                                 {% if r.message %}
-                                    <span class="badge bg-light text-dark border">{{ r.message.review_status }}</span>
+                                    {% if r.message.review_status == 'pending' %}
+                                        <span class="badge bg-warning text-dark">Pending Review</span>
+                                    {% elif r.message.review_status == 'confirmed' %}
+                                        <span class="badge bg-danger">Confirmed</span>
+                                    {% elif r.message.review_status == 'dismissed' %}
+                                        <span class="badge bg-success">Dismissed</span>
+                                    {% else %}
+                                        <span class="badge bg-light text-dark border">{{ r.message.review_status }}</span>
+                                    {% endif %}
                                 {% else %}
                                     <span class="text-muted small">No message</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end pe-4 small text-muted">{{ r.report.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+                            <td class="text-end pe-4 small text-muted">{{ r.created_at.strftime('%b %d, %Y %H:%M') if r.created_at else '-' }}</td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="7" class="text-center py-5 text-muted">
+                            <td colspan="8" class="text-center py-5 text-muted">
                                 <i class="bi bi-shield-check fs-1 text-success d-block mb-2"></i>
                                 <h6 class="fw-semibold">No message reports</h6>
                                 <p class="small mb-0">There are currently zero user-submitted message reports.</p>
@@ -124,7 +140,7 @@
     {% elif active_tab == 'autoflagged' %}
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
         <div class="card-header bg-white border-0 pt-3 px-4 d-flex justify-content-between align-items-center">
-            <h5 class="fw-bold mb-0 text-dark">Automated Keyword &amp; Aho-Corasick Triggers</h5>
+            <h5 class="fw-bold mb-0 text-dark">Automated Keyword &amp; Moderation Flags</h5>
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -142,7 +158,7 @@
                     {% if auto_flagged %}
                         {% for item in auto_flagged %}
                         <tr>
-                            <td class="ps-4 font-monospace">#{{ item.message.id }}</td>
+                            <td class="ps-4 font-monospace">#{{ item.id }}</td>
                             <td>
                                 {% if item.sender %}
                                     <a href="{{ url_for('admin.user_detail_view', user_id=item.sender.id) }}" class="text-decoration-none text-dark fw-medium">
@@ -152,20 +168,20 @@
                                     <span class="text-muted">Deleted User</span>
                                 {% endif %}
                             </td>
-                            <td><span class="badge bg-warning text-dark">{{ item.message.flag_reason }}</span></td>
-                            <td class="small font-monospace">{{ item.message.text }}</td>
+                            <td><span class="badge bg-warning text-dark">{{ item.flag_reason or 'Flagged' }}</span></td>
+                            <td class="small font-monospace">{{ item.text }}</td>
                             <td>
-                                {% if item.message.review_status == 'pending' %}
-                                    <span class="badge bg-warning">Pending Review</span>
-                                {% elif item.message.review_status == 'confirmed' %}
+                                {% if item.review_status == 'pending' %}
+                                    <span class="badge bg-warning text-dark">Pending Review</span>
+                                {% elif item.review_status == 'confirmed' %}
                                     <span class="badge bg-danger">Confirmed Violation</span>
-                                {% elif item.message.review_status == 'dismissed' %}
+                                {% elif item.review_status == 'dismissed' %}
                                     <span class="badge bg-success">Dismissed / Safe</span>
                                 {% else %}
-                                    <span class="badge bg-secondary">{{ item.message.review_status }}</span>
+                                    <span class="badge bg-secondary">{{ item.review_status }}</span>
                                 {% endif %}
                             </td>
-                            <td class="text-end pe-4 small text-muted">{{ item.message.created_at.strftime('%b %d, %Y %H:%M') }}</td>
+                            <td class="text-end pe-4 small text-muted">{{ item.created_at.strftime('%b %d, %Y %H:%M') if item.created_at else '-' }}</td>
                         </tr>
                         {% endfor %}
                     {% else %}
@@ -192,23 +208,35 @@
             <table class="table table-hover align-middle mb-0">
                 <thead class="table-light small text-uppercase text-muted">
                     <tr>
-                        <th class="ps-4">Source Category</th>
+                        <th class="ps-4">User</th>
+                        <th>Source Category</th>
                         <th>Action Taken</th>
-                        <th class="text-end pe-4">Incident Count</th>
+                        <th>Incident Count</th>
+                        <th class="text-end pe-4">Last Incident</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% if blocked_submissions %}
                         {% for row in blocked_submissions %}
                         <tr>
-                            <td class="ps-4 fw-medium text-capitalize">{{ row.source }}</td>
+                            <td class="ps-4">
+                                {% if row.user %}
+                                    <a href="{{ url_for('admin.user_detail_view', user_id=row.user.id) }}" class="text-decoration-none text-dark fw-medium">
+                                        {{ row.user.name }}
+                                    </a>
+                                {% else %}
+                                    <span class="text-muted">Unknown / Deleted</span>
+                                {% endif %}
+                            </td>
+                            <td class="fw-medium text-capitalize">{{ row.source }}</td>
                             <td><span class="badge bg-secondary">{{ row.action }}</span></td>
-                            <td class="text-end pe-4 fw-bold">{{ row.count }}</td>
+                            <td class="fw-bold">{{ row.blocked_count }}</td>
+                            <td class="text-end pe-4 small text-muted">{{ row.last_blocked.strftime('%b %d, %Y %H:%M') if row.last_blocked else '-' }}</td>
                         </tr>
                         {% endfor %}
                     {% else %}
                         <tr>
-                            <td colspan="3" class="text-center py-5 text-muted">
+                            <td colspan="5" class="text-center py-5 text-muted">
                                 <i class="bi bi-shield-check fs-1 text-success d-block mb-2"></i>
                                 <h6 class="fw-semibold">Zero blocked submissions</h6>
                                 <p class="small mb-0">No content submissions have been blocked by safety filters.</p>
@@ -224,7 +252,7 @@
     {% elif active_tab == 'offenders' %}
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-4">
         <div class="card-header bg-white border-0 pt-3 px-4">
-            <h5 class="fw-bold mb-0 text-dark">Accounts with Moderation Strikes</h5>
+            <h5 class="fw-bold mb-0 text-dark">Accounts with Moderation Strikes or Reports</h5>
         </div>
         <div class="table-responsive">
             <table class="table table-hover align-middle mb-0">
@@ -233,13 +261,14 @@
                         <th class="ps-4">User</th>
                         <th>Role</th>
                         <th>Account Status</th>
-                        <th>Active Strikes</th>
+                        <th>Active Strikes &amp; Reports</th>
                         <th class="text-end pe-4">Actions</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% if repeat_offenders %}
-                        {% for u in repeat_offenders %}
+                        {% for entry in repeat_offenders %}
+                        {% set u = entry.user %}
                         <tr>
                             <td class="ps-4">
                                 <div class="fw-bold">
@@ -258,8 +287,11 @@
                                 {% endif %}
                             </td>
                             <td>
-                                <span class="badge bg-danger fs-6 px-2 py-1">
-                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> {{ u.moderation_strikes }} strikes
+                                <span class="badge bg-danger px-2 py-1">
+                                    <i class="bi bi-exclamation-triangle-fill me-1"></i> {{ entry.strikes }} strikes
+                                </span>
+                                <span class="badge bg-warning text-dark px-2 py-1 ms-1">
+                                    {{ entry.reports_count }} reports
                                 </span>
                             </td>
                             <td class="text-end pe-4">
@@ -303,7 +335,7 @@
             <div class="col-12 col-md-4">
                 <div class="p-3 bg-light rounded-3">
                     <div class="fs-4 fw-bold text-danger">{{ doubt_summary.stale_count }}</div>
-                    <div class="small text-muted">Stale Doubts (> 7 Days Open)</div>
+                    <div class="small text-muted">Stale Unanswered (&gt; 3 Days)</div>
                 </div>
             </div>
         </div>

@@ -17,6 +17,7 @@ from app.models import (
     Message,
     AdminAuditLog,
     MessageReport,
+    ModerationLog,
 )
 from app.services.admin_service import sanitize_csv_cell
 
@@ -432,4 +433,64 @@ def test_audit_log_append_only(client, test_app):
 
     # Ensure log record still exists untouched
     with test_app.app_context():
-        assert AdminAuditLog.query.get(log_id) is not None
+        assert db.session.get(AdminAuditLog, log_id) is not None
+
+
+def test_admin_reports_all_tabs_populated(client, test_app):
+    """All 5 tabs on /admin/reports render cleanly when populated with real records."""
+    with test_app.app_context():
+        admin = create_user("admin@test.com", role="admin")
+        reporter = create_user("reporter@test.com", role="student", name="Reporter One")
+        author = create_user("author@test.com", role="student", name="Author Two")
+        author.moderation_strikes = 2
+
+        room = ChatRoom(type="private", created_by=reporter.id)
+        db.session.add(room)
+        db.session.flush()
+
+        msg = Message(
+            room_id=room.id,
+            sender_id=author.id,
+            text="[message hidden pending review]",
+            original_text="bad message",
+            is_flagged=True,
+            flag_reason="user: abusive",
+            review_status="pending",
+        )
+        db.session.add(msg)
+        db.session.flush()
+
+        report = MessageReport(
+            message_id=msg.id,
+            reporter_id=reporter.id,
+            reason="abusive",
+            note="Rude comment in chat",
+        )
+        mod_log = ModerationLog(
+            user_id=author.id,
+            source="doubt",
+            action="blocked",
+            matched_count=1,
+        )
+        doubt = Doubt(
+            user_id=reporter.id,
+            subject="Python",
+            title="Test Doubt Health",
+            body="Unanswered doubt body for health tab",
+        )
+        db.session.add_all([report, mod_log, doubt])
+        db.session.commit()
+        assert admin.id is not None
+
+    client.post("/auth/login", data={"email": "admin@test.com", "password": "SecurePassword123"})
+
+    for tab, expected_bytes in [
+        ("reports", b"Rude comment in chat"),
+        ("autoflagged", b"Author Two"),
+        ("blocked", b"Author Two"),
+        ("offenders", b"2 strikes"),
+        ("health", b"Total Doubts Logged"),
+    ]:
+        res = client.get(f"/admin/reports?tab={tab}")
+        assert res.status_code == 200
+        assert expected_bytes in res.data

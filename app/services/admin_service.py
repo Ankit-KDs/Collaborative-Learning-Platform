@@ -590,27 +590,30 @@ def get_auto_flagged_messages_data(
 
 
 def get_blocked_submissions_data() -> list[dict[str, Any]]:
-    """Aggregate blocked submission logs per user and per source (doubt/answer/chat)."""
+    """Aggregate moderation log submissions per user, source (doubt/answer/chat), and action."""
     rows = (
         db.session.query(
             ModerationLog.user_id,
             ModerationLog.source,
+            ModerationLog.action,
             func.count(ModerationLog.id).label("blocked_count"),
             func.max(ModerationLog.created_at).label("last_blocked"),
         )
-        .group_by(ModerationLog.user_id, ModerationLog.source)
+        .group_by(ModerationLog.user_id, ModerationLog.source, ModerationLog.action)
         .order_by(desc("blocked_count"))
         .all()
     )
 
     results = []
-    for uid, src, cnt, last_dt in rows:
-        u = User.query.get(uid) if uid else None
+    for uid, src, act, cnt, last_dt in rows:
+        u = db.session.get(User, uid) if uid else None
         results.append(
             {
                 "user": u,
                 "user_id": uid,
                 "source": src,
+                "action": act,
+                "count": cnt,
                 "blocked_count": cnt,
                 "last_blocked": last_dt,
             }
@@ -649,6 +652,9 @@ def get_doubt_content_summary_data() -> dict[str, Any]:
     """Retrieve unanswered doubts older than 3 days, escalated doubts, and faculty verifications."""
     three_days_ago = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(days=3)
 
+    total_doubts = Doubt.query.count()
+    unanswered_count = Doubt.query.filter(~Doubt.answers.any()).count()
+
     stale_unanswered = (
         Doubt.query.filter(~Doubt.answers.any(), Doubt.created_at <= three_days_ago)
         .order_by(Doubt.created_at.asc())
@@ -671,6 +677,9 @@ def get_doubt_content_summary_data() -> dict[str, Any]:
     )
 
     return {
+        "total_doubts": total_doubts,
+        "unanswered_count": unanswered_count,
+        "stale_count": len(stale_unanswered),
         "stale_unanswered": stale_unanswered,
         "needs_human_doubts": needs_human_doubts,
         "faculty_verifications": faculty_verifications,
