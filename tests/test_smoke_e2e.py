@@ -219,3 +219,114 @@ def test_end_to_end_student_lifecycle(test_app, client):
         assert rep is not None
         assert rep.score == 27
         assert rep.badge == "Helper"
+
+
+def test_landing_and_footer_no_internal_jargon(client):
+    """Verify landing page cards and footer present real-world product copy without internal algorithm badges."""
+    res = client.get("/")
+    assert res.status_code == 200
+    html = res.data.decode("utf-8")
+
+    # Footer should not expose vibe-coding / internal stage badges
+    assert "8-Stage" not in html
+    assert "Production Ready" not in html
+    assert "Production Full-Stack" not in html
+    assert "Campus Peer Learning" in html
+
+    # Landing cards should not expose internal algorithm/model badge tags
+    for badge_text in [
+        "Greedy Algorithm",
+        "Merge Sort &amp; KMP",
+        "Merge Sort & KMP",
+        "Gemini / Groq LLM",
+        "Aho-Corasick Automaton",
+    ]:
+        assert badge_text not in html
+
+
+def test_logout_confirmation_modal_present(test_app, client):
+    """Verify authenticated pages render a logout confirmation modal instead of instant logout."""
+    with test_app.app_context():
+        reset_failed_logins(clear_all=True)
+        u = User(name="Modal User", email="modal@test.com", role="student", branch="CS", year=2)
+        u.set_password("pass1234")
+        db.session.add(u)
+        db.session.commit()
+
+    res = client.post(
+        "/auth/login",
+        data={"email": "modal@test.com", "password": "pass1234"},
+        follow_redirects=True,
+    )
+    assert res.status_code == 200
+    html = res.data.decode("utf-8")
+    assert 'data-bs-target="#logoutConfirmModal"' in html
+    assert 'id="logoutConfirmModal"' in html
+    assert 'id="confirmLogoutBtn"' in html
+    assert "/auth/logout" in html
+
+
+def test_per_tab_session_isolation(test_app, client):
+    """Verify two browser tabs in the same cookie jar maintain completely independent login sessions."""
+    with test_app.app_context():
+        reset_failed_logins(clear_all=True)
+        s1 = User(name="Student Alpha", email="alpha@test.com", role="student", branch="CS", year=2)
+        s1.set_password("pass1234")
+        t1 = User(name="Teacher Beta", email="beta@test.com", role="teacher", branch="CS", year=4)
+        t1.set_password("pass1234")
+        db.session.add_all([s1, t1])
+        db.session.commit()
+
+    tab1 = "t_tabalpha123"
+    tab2 = "t_tabbeta456"
+
+    # Log into Tab 1 as Student Alpha (even with remember=True)
+    res1 = client.post(
+        f"/auth/login?_tab={tab1}",
+        data={"email": "alpha@test.com", "password": "pass1234", "remember": "y"},
+        follow_redirects=True,
+    )
+    assert res1.status_code == 200
+    assert b"Student Alpha" in res1.data
+
+    # Tab 2 in the SAME browser client must remain logged out on / and /auth/login
+    res2_home = client.get(f"/?_tab={tab2}", follow_redirects=False)
+    assert res2_home.status_code == 200
+    assert b"Join as Student or Teacher" in res2_home.data
+
+    res2_login = client.get(f"/auth/login?_tab={tab2}", follow_redirects=False)
+    assert res2_login.status_code == 200
+    assert b"Welcome Back" in res2_login.data
+
+    # Log into Tab 2 as Teacher Beta
+    res2_auth = client.post(
+        f"/auth/login?_tab={tab2}",
+        data={"email": "beta@test.com", "password": "pass1234"},
+        follow_redirects=True,
+    )
+    assert res2_auth.status_code == 200
+    assert b"Teacher Beta" in res2_auth.data
+
+    # Tab 1 is STILL Student Alpha, and Tab 2 is STILL Teacher Beta
+    dash1 = client.get(f"/dashboard?_tab={tab1}")
+    assert dash1.status_code == 200
+    assert b"Student Alpha" in dash1.data
+    assert b"Teacher Beta" not in dash1.data
+
+    dash2 = client.get(f"/dashboard?_tab={tab2}")
+    assert dash2.status_code == 200
+    assert b"Teacher Beta" in dash2.data
+    assert b"Student Alpha" not in dash2.data
+
+    # X-Tab-Id header works for AJAX / fetch calls
+    dash1_hdr = client.get("/dashboard", headers={"X-Tab-Id": tab1})
+    assert dash1_hdr.status_code == 200
+    assert b"Student Alpha" in dash1_hdr.data
+
+    # Logging out Tab 1 does NOT log out Tab 2
+    logout1 = client.get(f"/auth/logout?_tab={tab1}", follow_redirects=True)
+    assert logout1.status_code == 200
+    assert b"signed out" in logout1.data
+
+    assert client.get(f"/dashboard?_tab={tab1}", follow_redirects=False).status_code == 302
+    assert client.get(f"/dashboard?_tab={tab2}", follow_redirects=False).status_code == 200

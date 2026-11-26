@@ -306,3 +306,11 @@ textarea:focus-visible {
 .footer {
     font-size: 0.875rem;
 }
+
+.footer-link {
+    transition: color 0.15s ease;
+}
+
+.footer-link:hover {
+    color: #2563eb !important;
+}

@@ -19,6 +19,83 @@
     <!-- Custom CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+    <script>
+    (function () {
+        var KEY = "collablearn_tab_id";
+        var validRe = /^t_[a-zA-Z0-9_-]{6,32}$/;
+        var tabId = null;
+        var storageOk = false;
+        try {
+            tabId = window.sessionStorage.getItem(KEY);
+            if (!tabId || !validRe.test(tabId)) {
+                var rnd = (window.crypto && window.crypto.getRandomValues)
+                    ? Array.from(window.crypto.getRandomValues(new Uint8Array(6)), function (b) {
+                        return b.toString(16).padStart(2, "0");
+                      }).join("")
+                    : (Date.now().toString(36) + Math.random().toString(36).slice(2, 8));
+                tabId = "t_" + rnd;
+                window.sessionStorage.setItem(KEY, tabId);
+            }
+            storageOk = (window.sessionStorage.getItem(KEY) === tabId);
+        } catch (e) {
+            storageOk = false;
+        }
+        if (!storageOk || !tabId) return;
+
+        window.__COLLABLEARN_TAB_ID__ = tabId;
+
+        // Attach X-Tab-Id header automatically to same-origin fetch() and XHR requests
+        if (window.fetch) {
+            var origFetch = window.fetch;
+            window.fetch = function (input, init) {
+                init = init ? Object.assign({}, init) : {};
+                var urlStr = (typeof input === "string") ? input : (input && input.url ? input.url : "");
+                var isSameOrigin = false;
+                try {
+                    var parsed = new URL(urlStr, window.location.origin);
+                    isSameOrigin = (parsed.origin === window.location.origin);
+                } catch (e) {}
+                if (isSameOrigin) {
+                    var baseHeaders = init.headers || (typeof input !== "string" && input && input.headers ? input.headers : undefined);
+                    var headers = new Headers(baseHeaders);
+                    if (!headers.has("X-Tab-Id")) {
+                        headers.set("X-Tab-Id", tabId);
+                    }
+                    init.headers = headers;
+                }
+                return origFetch.call(this, input, init);
+            };
+        }
+
+        if (window.XMLHttpRequest) {
+            var origOpen = XMLHttpRequest.prototype.open;
+            var origSend = XMLHttpRequest.prototype.send;
+            XMLHttpRequest.prototype.open = function (method, url) {
+                this.__clSameOrigin = false;
+                try {
+                    var parsed = new URL(url, window.location.origin);
+                    this.__clSameOrigin = (parsed.origin === window.location.origin);
+                } catch (e) {}
+                return origOpen.apply(this, arguments);
+            };
+            XMLHttpRequest.prototype.send = function () {
+                if (this.__clSameOrigin) {
+                    try { this.setRequestHeader("X-Tab-Id", tabId); } catch (e) {}
+                }
+                return origSend.apply(this, arguments);
+            };
+        }
+
+        // Sync URL _tab parameter so page reloads and redirects stay isolated to this tab
+        try {
+            var curUrl = new URL(window.location.href);
+            if (curUrl.searchParams.get("_tab") !== tabId) {
+                curUrl.searchParams.set("_tab", tabId);
+                window.location.replace(curUrl.toString());
+            }
+        } catch (e) {}
+    })();
+    </script>
     {% block extra_head %}{% endblock %}
 </head>
 <body class="d-flex flex-column min-vh-100 bg-light">
@@ -214,9 +291,9 @@
                         {% endif %}
                     </li>
                     <li class="nav-item">
-                        <a class="btn btn-outline-light btn-sm rounded-pill px-3" href="{{ url_for('auth.logout') }}">
+                        <button type="button" class="btn btn-outline-light btn-sm rounded-pill px-3" data-bs-toggle="modal" data-bs-target="#logoutConfirmModal">
                             <i class="bi bi-box-arrow-right me-1"></i> Logout
-                        </a>
+                        </button>
                     </li>
                 </ul>
                 {% else %}
@@ -271,15 +348,66 @@
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Platform Footer -->
-    <footer class="footer mt-auto py-3 bg-white border-top text-muted">
-        <div class="container text-center text-md-start d-md-flex justify-content-between align-items-center">
-            <div class="mb-2 mb-md-0 small">
-                <span class="fw-bold text-dark">CollabLearn AI</span> &bull; Production Full-Stack College Learning System
+    {% if current_user.is_authenticated %}
+    <!-- Logout Confirmation Modal -->
+    <div class="modal fade" id="logoutConfirmModal" tabindex="-1" aria-labelledby="logoutConfirmModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-sm">
+            <div class="modal-content border-0 shadow-lg rounded-4">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="logoutConfirmModalLabel">
+                        <span class="d-inline-flex align-items-center justify-content-center bg-danger-subtle text-danger rounded-circle" style="width: 34px; height: 34px;">
+                            <i class="bi bi-box-arrow-right"></i>
+                        </span>
+                        <span>Confirm Logout</span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body text-muted small pt-2">
+                    Are you sure you want to sign out of <strong>{{ current_user.name }}</strong>'s session?
+                </div>
+                <div class="modal-footer border-0 pt-0 d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-light btn-sm rounded-pill px-3 fw-semibold" data-bs-dismiss="modal">Cancel</button>
+                    <a href="{{ url_for('auth.logout') }}" class="btn btn-danger btn-sm rounded-pill px-3 fw-semibold" id="confirmLogoutBtn">
+                        <i class="bi bi-box-arrow-right me-1"></i> Yes, Logout
+                    </a>
+                </div>
             </div>
-            <div class="small text-secondary">
-                <span class="badge bg-success-subtle text-success border border-success-subtle">Production Ready</span>
-                &bull; Complete 8-Stage Academic Architecture
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Platform Footer -->
+    <footer class="footer mt-auto py-4 bg-white border-top text-muted">
+        <div class="container">
+            <div class="row align-items-center gy-3">
+                <div class="col-12 col-md-6 text-center text-md-start">
+                    <div class="d-inline-flex align-items-center gap-2 mb-1">
+                        <span class="d-inline-flex align-items-center justify-content-center bg-primary text-white rounded-2" style="width: 24px; height: 24px; font-size: 0.8rem;">
+                            <i class="bi bi-mortarboard-fill"></i>
+                        </span>
+                        <span class="fw-bold text-dark">CollabLearn AI</span>
+                    </div>
+                    <p class="small text-secondary mb-0">
+                        &copy; 2026 CollabLearn AI. Campus Peer Learning &amp; Doubt Resolution.
+                    </p>
+                </div>
+                <div class="col-12 col-md-6 text-center text-md-end">
+                    <div class="d-flex flex-wrap justify-content-center justify-content-md-end gap-3 small">
+                        <a href="{{ url_for('main.index') }}" class="text-decoration-none text-secondary footer-link">Home</a>
+                        <a href="{{ url_for('main.leaderboard') }}" class="text-decoration-none text-secondary footer-link">Leaderboard</a>
+                        {% if current_user.is_authenticated %}
+                            {% if current_user.is_admin %}
+                                <a href="{{ url_for('admin.dashboard') }}" class="text-decoration-none text-secondary footer-link">Admin Console</a>
+                            {% else %}
+                                <a href="{{ url_for('doubts.index') }}" class="text-decoration-none text-secondary footer-link">Doubts</a>
+                                <a href="{{ url_for('exam.index') }}" class="text-decoration-none text-secondary footer-link">Exam Mode</a>
+                            {% endif %}
+                        {% else %}
+                            <a href="{{ url_for('auth.login') }}" class="text-decoration-none text-secondary footer-link">Sign In</a>
+                            <a href="{{ url_for('auth.register') }}" class="text-decoration-none text-secondary footer-link">Create Account</a>
+                        {% endif %}
+                    </div>
+                </div>
             </div>
         </div>
     </footer>

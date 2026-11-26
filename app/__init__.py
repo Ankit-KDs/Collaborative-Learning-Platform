@@ -3,18 +3,68 @@ Application factory and extension initialization for AI-Powered Collaborative Le
 """
 
 import os
+import re
 import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from flask import Flask, render_template, request, jsonify, flash, redirect, url_for
+from urllib.parse import urlsplit, urlunsplit, parse_qsl, urlencode
+from flask import Flask, render_template, request, jsonify, flash, redirect, url_for, g, has_request_context
+from flask.sessions import SecureCookieSessionInterface
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user
 from flask_wtf.csrf import CSRFProtect
 from app.config import config_by_name, BASE_DIR
 
+_TAB_ID_RE = re.compile(r"^t_[a-zA-Z0-9_-]{6,32}$")
+
+
+def extract_valid_tab_id(req) -> str | None:
+    """Extract and validate a per-tab isolation token from request headers or query params."""
+    if not req:
+        return None
+    raw = req.headers.get("X-Tab-Id") or req.args.get("_tab")
+    if raw and _TAB_ID_RE.match(raw):
+        return raw
+    return None
+
+
+class TabAwareSessionInterface(SecureCookieSessionInterface):
+    """
+    Isolates Flask sessions per browser tab when a valid tab ID is present
+    (_tab query param or X-Tab-Id header), while preserving standard cookie
+    behavior for non-tab requests (e.g., tests, CLI, API clients).
+    """
+
+    def get_cookie_name(self, app: Flask) -> str:
+        tab_id = getattr(g, "tab_id", None) if has_request_context() else None
+        if not tab_id and has_request_context():
+            tab_id = extract_valid_tab_id(request)
+            if tab_id:
+                g.tab_id = tab_id
+        if tab_id:
+            return f"{app.config['SESSION_COOKIE_NAME']}_{tab_id}"
+        return super().get_cookie_name(app)
+
+    def open_session(self, app: Flask, request):  # type: ignore[override]
+        tab_id = extract_valid_tab_id(request)
+        if has_request_context():
+            g.tab_id = tab_id
+            g.pop("_login_user", None)
+        return super().open_session(app, request)
+
+
+class TabAwareLoginManager(LoginManager):
+    """Prevents global remember_token cookies from leaking across isolated browser tabs."""
+
+    def _load_user_from_remember_cookie(self, cookie):
+        if has_request_context() and getattr(g, "tab_id", None):
+            return None
+        return super()._load_user_from_remember_cookie(cookie)
+
+
 # Initialize Flask extensions
 db = SQLAlchemy()
-login_manager = LoginManager()
+login_manager = TabAwareLoginManager()
 csrf = CSRFProtect()
 
 # Configure Flask-Login defaults
@@ -71,9 +121,19 @@ def create_app(config_name: str = "default") -> Flask:
         app.logger.setLevel(logging.INFO)
 
     # Initialize extensions with app instance
+    app.session_interface = TabAwareSessionInterface()
     db.init_app(app)
     login_manager.init_app(app)
     csrf.init_app(app)
+
+    @app.url_defaults
+    def inject_tab_id_in_urls(endpoint, values):
+        """Automatically propagate the active tab's _tab session token in generated URLs."""
+        if endpoint == "static" or endpoint.endswith(".static"):
+            return
+        tab_id = getattr(g, "tab_id", None) if has_request_context() else None
+        if tab_id and "_tab" not in values:
+            values["_tab"] = tab_id
 
     # Import models so SQLAlchemy metadata is aware of all tables
     from app import models  # noqa: F401
@@ -172,10 +232,34 @@ def create_app(config_name: str = "default") -> Flask:
                 "error": "Database ping failed"
             }), 503
 
-    # Security headers applied via after_request
+    # Security headers and per-tab redirect/cookie isolation applied via after_request
     @app.after_request
     def apply_security_headers(response):
-        """Inject strict security headers across all responses."""
+        """Inject strict security headers and maintain per-tab session isolation across redirects."""
+        tab_id = getattr(g, "tab_id", None) if has_request_context() else None
+        if tab_id:
+            if response.status_code in (301, 302, 303, 307, 308) and "Location" in response.headers:
+                loc = response.headers["Location"]
+                parsed = urlsplit(loc)
+                if not parsed.netloc or parsed.netloc == request.host:
+                    query_params = [(k, v) for k, v in parse_qsl(parsed.query, keep_blank_values=True) if k != "_tab"]
+                    query_params.append(("_tab", tab_id))
+                    response.headers["Location"] = urlunsplit((
+                        parsed.scheme,
+                        parsed.netloc,
+                        parsed.path,
+                        urlencode(query_params),
+                        parsed.fragment,
+                    ))
+
+            # Clear any legacy browser-wide session/remember cookies so new tabs never auto-login
+            global_session_cookie = app.config.get("SESSION_COOKIE_NAME", "session")
+            global_remember_cookie = app.config.get("REMEMBER_COOKIE_NAME", "remember_token")
+            if global_session_cookie in request.cookies:
+                response.delete_cookie(global_session_cookie)
+            if global_remember_cookie in request.cookies:
+                response.delete_cookie(global_remember_cookie)
+
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "SAMEORIGIN"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"

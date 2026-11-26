@@ -7,7 +7,7 @@ import json
 import time
 from collections import defaultdict
 from urllib.parse import urlsplit
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app
+from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, g, session
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models import User, TeacherSubject, AdminAuditLog, utc_now
@@ -372,7 +372,13 @@ def login():
                 db.session.add(audit)
             db.session.commit()
 
-            login_user(user, remember=form.remember.data)
+            tab_id = getattr(g, "tab_id", None)
+            if tab_id:
+                login_user(user, remember=False)
+                if form.remember.data:
+                    session.permanent = True
+            else:
+                login_user(user, remember=form.remember.data)
             flash(f"Welcome back, {user.name}!", "success")
 
             next_page = request.args.get("next")
