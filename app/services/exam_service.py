@@ -70,7 +70,7 @@ def compute_most_asked_topics(doubts: list[Doubt], top_k: int = 10) -> list[dict
             min_df=1,
             token_pattern=r"(?u)\b[a-zA-Z]{3,}\b",
         )
-        tfidf_matrix = vectorizer.fit_transform(corpus)
+        tfidf_matrix: Any = vectorizer.fit_transform(corpus)
         feature_names = vectorizer.get_feature_names_out()
 
         # Aggregate mean TF-IDF weight for each term across all documents
@@ -130,7 +130,7 @@ def cluster_faq_doubts(
             min_df=1,
             token_pattern=r"(?u)\b[a-zA-Z]{2,}\b",
         )
-        tfidf_matrix = vectorizer.fit_transform(corpus)
+        tfidf_matrix: Any = vectorizer.fit_transform(corpus)
     except Exception:
         # Fallback: each doubt forms its own individual cluster
         tfidf_matrix = None

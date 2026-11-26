@@ -10,18 +10,15 @@ import sys
 import pytest
 from app import create_app, db
 from app.models import User, TeacherSubject
-from app.auth.routes import _failed_invite_code_attempts
 
 
 @pytest.fixture
 def test_app():
     """Create test application configured with isolated in-memory database."""
     app = create_app("testing")
-    app.config["TEACHER_INVITE_CODE"] = "test-teacher-secret-code"
     app.config["WTF_CSRF_ENABLED"] = False
     with app.app_context():
         db.create_all()
-        _failed_invite_code_attempts.clear()
         yield app
         db.session.remove()
         db.drop_all()
@@ -180,33 +177,12 @@ def test_duplicate_enrollment_blocked_in_same_college(client, test_app):
         assert User.query.filter_by(email="three@other.edu").first() is not None
 
 
-def test_teacher_registration_invite_code_protection(client, test_app):
-    """Faculty registration requires valid invite code and creates TeacherSubjects."""
-    # 1. Invalid invite code -> REJECTED
-    res = client.post(
-        "/auth/register",
-        data={
-            "role_type": "teacher",
-            "teacher-name": "Dr. Wrong Code",
-            "teacher-email": "wrong@faculty.edu",
-            "teacher-college_name": "Metro Tech",
-            "teacher-employee_id": "EMP-999",
-            "teacher-department": "Computer Science",
-            "teacher-designation": "Assistant Professor",
-            "teacher-qualification": "Ph.D",
-            "teacher-experience_years": "5",
-            "teacher-subjects": ["Data Structures", "Python"],
-            "teacher-invite_code": "wrong-secret-code",
-            "teacher-password": "Password123",
-            "teacher-confirm_password": "Password123",
-        },
-        follow_redirects=True,
-    )
-    assert b"Invalid faculty invite code" in res.data
-    with test_app.app_context():
-        assert User.query.filter_by(email="wrong@faculty.edu").first() is None
+def test_teacher_registration_without_invite_code(client, test_app):
+    """Faculty registration works directly without an invite code and creates TeacherSubjects."""
+    res_page = client.get("/auth/register?role=teacher")
+    assert res_page.status_code == 200
+    assert b"Faculty Invite Code" not in res_page.data
 
-    # 2. Valid invite code -> SUCCEEDS
     res = client.post(
         "/auth/register",
         data={
@@ -220,7 +196,6 @@ def test_teacher_registration_invite_code_protection(client, test_app):
             "teacher-qualification": "Ph.D",
             "teacher-experience_years": "8",
             "teacher-subjects": ["Data Structures", "DAA", "Python"],
-            "teacher-invite_code": "test-teacher-secret-code",
             "teacher-password": "Password123",
             "teacher-confirm_password": "Password123",
         },
@@ -256,7 +231,6 @@ def test_duplicate_employee_id_blocked_in_same_college(client, test_app):
             "teacher-qualification": "M.Tech",
             "teacher-experience_years": "4",
             "teacher-subjects": ["DBMS"],
-            "teacher-invite_code": "test-teacher-secret-code",
             "teacher-password": "Password123",
             "teacher-confirm_password": "Password123",
         },
@@ -277,7 +251,6 @@ def test_duplicate_employee_id_blocked_in_same_college(client, test_app):
             "teacher-qualification": "M.Tech",
             "teacher-experience_years": "3",
             "teacher-subjects": ["Operating Systems"],
-            "teacher-invite_code": "test-teacher-secret-code",
             "teacher-password": "Password123",
             "teacher-confirm_password": "Password123",
         },

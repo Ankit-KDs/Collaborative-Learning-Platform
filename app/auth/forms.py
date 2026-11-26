@@ -244,12 +244,6 @@ class TeacherRegistrationForm(FlaskForm):
         validators=[DataRequired(message="Please select at least one subject you teach.")],
     )
 
-    invite_code = PasswordField(
-        "Faculty Invite Code",
-        validators=[DataRequired(message="Faculty invite code is required to register as a teacher.")],
-        render_kw={"placeholder": "Enter institutional invite code"},
-    )
-
     bio = TextAreaField(
         "Faculty Bio / Research Interests (Optional)",
         validators=[Optional(), Length(max=200, message="Bio cannot exceed 200 characters.")],

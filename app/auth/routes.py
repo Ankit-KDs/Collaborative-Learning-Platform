@@ -2,12 +2,12 @@
 Authentication routes for registration, role-specific onboarding, login, and logout.
 """
 
-import hmac
 import json
 import time
 from collections import defaultdict
+from typing import Any
 from urllib.parse import urlsplit
-from flask import Blueprint, render_template, redirect, url_for, flash, request, current_app, g, session
+from flask import Blueprint, render_template, redirect, url_for, flash, request, g, session
 from flask_login import login_user, logout_user, login_required, current_user
 from app import db
 from app.models import User, TeacherSubject, AdminAuditLog, utc_now
@@ -25,11 +25,6 @@ auth_bp = Blueprint("auth", __name__)
 _failed_login_attempts: dict[str, list[float]] = defaultdict(list)
 LOGIN_RATE_LIMIT_WINDOW = 15 * 60  # 15 minutes window
 LOGIN_RATE_LIMIT_MAX_ATTEMPTS = 5
-
-# Sliding window rate limiter for teacher invite code attempts
-_failed_invite_code_attempts: dict[str, list[float]] = defaultdict(list)
-INVITE_CODE_RATE_LIMIT_WINDOW = 15 * 60  # 15 minutes window
-INVITE_CODE_RATE_LIMIT_MAX_ATTEMPTS = 5
 
 
 def get_client_ip() -> str:
@@ -74,40 +69,6 @@ def reset_failed_logins(email: str | None = None, ip: str | None = None, clear_a
         _failed_login_attempts.pop(f"ip:{ip}", None)
 
 
-def is_invite_code_rate_limited(email: str, ip: str) -> tuple[bool, int]:
-    """Check if the given email or IP is rate-limited for invite codes."""
-    now = time.time()
-    for key in (f"invite_email:{email.lower()}", f"invite_ip:{ip}"):
-        attempts = [t for t in _failed_invite_code_attempts[key] if now - t < INVITE_CODE_RATE_LIMIT_WINDOW]
-        _failed_invite_code_attempts[key] = attempts
-        if len(attempts) >= INVITE_CODE_RATE_LIMIT_MAX_ATTEMPTS:
-            oldest = attempts[0]
-            remaining_secs = int(INVITE_CODE_RATE_LIMIT_WINDOW - (now - oldest))
-            remaining_mins = max(1, (remaining_secs + 59) // 60)
-            return True, remaining_mins
-    return False, 0
-
-
-def record_failed_invite_code(email: str, ip: str) -> None:
-    """Record a failed invite code attempt."""
-    now = time.time()
-    for key in (f"invite_email:{email.lower()}", f"invite_ip:{ip}"):
-        attempts = [t for t in _failed_invite_code_attempts[key] if now - t < INVITE_CODE_RATE_LIMIT_WINDOW]
-        attempts.append(now)
-        _failed_invite_code_attempts[key] = attempts
-
-
-def reset_failed_invite_codes(email: str | None = None, ip: str | None = None, clear_all: bool = False) -> None:
-    """Reset invite code rate limiter counters."""
-    if clear_all:
-        _failed_invite_code_attempts.clear()
-        return
-    if email:
-        _failed_invite_code_attempts.pop(f"invite_email:{email.lower()}", None)
-    if ip:
-        _failed_invite_code_attempts.pop(f"invite_ip:{ip}", None)
-
-
 def is_safe_redirect_url(target: str) -> bool:
     """Validate that redirect target is relative to prevent open redirect exploits."""
     if not target:
@@ -122,16 +83,16 @@ def validate_student_program_academics(program: str, specialization: str, year: 
     if program not in PROGRAMS:
         return False, f"Selected program '{program}' is not supported."
 
-    meta = PROGRAMS[program]
-    allowed_specs = meta.get("specializations", [])
+    meta: dict[str, Any] = PROGRAMS[program]
+    allowed_specs = list(meta.get("specializations", []))
     if specialization not in allowed_specs:
         return False, f"Specialization '{specialization}' is not valid for {program}."
 
-    max_years = meta.get("years", 4)
+    max_years = int(meta.get("years", 4))
     if year < 1 or year > max_years:
         return False, f"Academic year {year} is out of bounds for {program} (1 to {max_years})."
 
-    max_sems = meta.get("semesters", 8)
+    max_sems = int(meta.get("semesters", 8))
     if semester < 1 or semester > max_sems:
         return False, f"Semester {semester} is out of bounds for {program} (1 to {max_sems})."
 
@@ -214,80 +175,35 @@ def register():
     # Handle Teacher Registration Submission
     elif request.method == "POST" and request.form.get("role_type") == "teacher":
         active_role = "teacher"
-        client_ip = get_client_ip()
         email_attempt = (teacher_form.email.data or "").strip().lower()
 
-        # 1. Check if teacher registration is enabled via TEACHER_INVITE_CODE
-        configured_code = current_app.config.get("TEACHER_INVITE_CODE", "").strip()
-        if not configured_code:
-            flash(
-                "Faculty registration is currently disabled by the institute administrator. "
-                "Please contact your academic office.",
-                "warning",
-            )
-            return render_template(
-                "auth/register.html",
-                title="Create Account",
-                student_form=student_form,
-                teacher_form=teacher_form,
-                active_role="teacher",
-                programs_json=json.dumps(PROGRAMS),
-            ), 403
-
-        # 2. Rate limiting on invite code attempts
-        blocked, mins_left = is_invite_code_rate_limited(email_attempt, client_ip)
-        if blocked:
-            flash(
-                f"Too many failed faculty invite code attempts. "
-                f"For security, access is temporarily locked for {mins_left} minute(s).",
-                "danger",
-            )
-            return render_template(
-                "auth/register.html",
-                title="Create Account",
-                student_form=student_form,
-                teacher_form=teacher_form,
-                active_role="teacher",
-                programs_json=json.dumps(PROGRAMS),
-            ), 429
-
-        # 3. Form validation
         if teacher_form.validate_on_submit():
-            submitted_code = (teacher_form.invite_code.data or "").strip()
-            if not hmac.compare_digest(submitted_code, configured_code):
-                record_failed_invite_code(email_attempt, client_ip)
-                teacher_form.invite_code.errors = list(teacher_form.invite_code.errors) + ["Invalid faculty invite code. Access denied."]
-                flash("Invalid faculty invite code. Please check with your department coordinator.", "danger")
-            else:
-                # Valid code: clear invite code rate limits
-                reset_failed_invite_codes(email=email_attempt, ip=client_ip)
+            user = User(
+                name=(teacher_form.name.data or "").strip(),
+                email=email_attempt,
+                role="teacher",
+                employee_id=(teacher_form.employee_id.data or "").strip(),
+                college_name=(teacher_form.college_name.data or "").strip(),
+                department=(teacher_form.department.data or "").strip(),
+                designation=(teacher_form.designation.data or "").strip(),
+                qualification=(teacher_form.qualification.data or "").strip(),
+                experience_years=int(teacher_form.experience_years.data or 0),
+                branch=(teacher_form.department.data or "").strip(),  # legacy compatibility
+                year=None,
+                bio=(teacher_form.bio.data or "").strip() or None,
+            )
+            user.set_password(teacher_form.password.data or "")
+            db.session.add(user)
+            db.session.flush()
 
-                user = User(
-                    name=(teacher_form.name.data or "").strip(),
-                    email=email_attempt,
-                    role="teacher",
-                    employee_id=(teacher_form.employee_id.data or "").strip(),
-                    college_name=(teacher_form.college_name.data or "").strip(),
-                    department=(teacher_form.department.data or "").strip(),
-                    designation=(teacher_form.designation.data or "").strip(),
-                    qualification=(teacher_form.qualification.data or "").strip(),
-                    experience_years=int(teacher_form.experience_years.data or 0),
-                    branch=(teacher_form.department.data or "").strip(),  # legacy compatibility
-                    year=None,
-                    bio=(teacher_form.bio.data or "").strip() or None,
-                )
-                user.set_password(teacher_form.password.data or "")
-                db.session.add(user)
-                db.session.flush()
+            # Save teaching subjects
+            for subj in (teacher_form.subjects.data or []):
+                ts = TeacherSubject(user_id=user.id, subject=subj)
+                db.session.add(ts)
 
-                # Save teaching subjects
-                for subj in (teacher_form.subjects.data or []):
-                    ts = TeacherSubject(user_id=user.id, subject=subj)
-                    db.session.add(ts)
-
-                db.session.commit()
-                flash("Faculty account created successfully! Please sign in below.", "success")
-                return redirect(url_for("auth.login"))
+            db.session.commit()
+            flash("Faculty account created successfully! Please sign in below.", "success")
+            return redirect(url_for("auth.login"))
 
     # Legacy support if simple POST with role='student' or 'teacher' (from old test cases)
     elif request.method == "POST" and not request.form.get("role_type"):

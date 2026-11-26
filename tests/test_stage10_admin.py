@@ -26,7 +26,6 @@ from app.services.admin_service import sanitize_csv_cell
 def test_app():
     """Create test application configured with isolated in-memory database."""
     app = create_app("testing")
-    app.config["TEACHER_INVITE_CODE"] = "test-teacher-secret-code"
     app.config["WTF_CSRF_ENABLED"] = False
     app.config["ADMIN_CAN_VIEW_CHAT_CONTENT"] = False
     with app.app_context():

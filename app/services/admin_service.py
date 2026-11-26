@@ -165,13 +165,13 @@ def get_users_paginated(
         query = query.filter_by(is_active=False)
 
     # Sorting
-    allowed_sorts = {
+    allowed_sorts: dict[str, Any] = {
         "created_at": User.created_at,
         "name": User.name,
         "email": User.email,
         "last_login_at": User.last_login_at,
     }
-    sort_column = allowed_sorts.get(sort_by, User.created_at)
+    sort_column: Any = allowed_sorts.get(sort_by, User.created_at)
     if sort_order == "asc":
         query = query.order_by(sort_column.asc())
     else:

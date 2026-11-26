@@ -158,7 +158,7 @@ def find_similar_doubts(
             ngram_range=(1, 2),
             token_pattern=r"(?u)\b\w+\b",
         )
-        tfidf_matrix = vectorizer.fit_transform(corpus_texts)
+        tfidf_matrix: Any = vectorizer.fit_transform(corpus_texts)
     except (ValueError, TypeError):
         # Graceful fallback for empty vocabulary or malformed text
         return []

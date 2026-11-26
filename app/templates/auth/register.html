@@ -294,19 +294,6 @@
                                 </div>
                             </div>
 
-                            <!-- Invite Code (Faculty Gate) -->
-                            <div class="mb-3">
-                                {{ teacher_form.invite_code.label(class="form-label") }}
-                                <div class="input-group">
-                                    <span class="input-group-text bg-light text-muted"><i class="bi bi-key-fill text-warning"></i></span>
-                                    {{ teacher_form.invite_code(class="form-control" + (" is-invalid" if teacher_form.invite_code.errors else "")) }}
-                                </div>
-                                <div class="form-text small text-muted">Contact your college IT or academic dean if you do not have this code.</div>
-                                {% for err in teacher_form.invite_code.errors %}
-                                    <div class="invalid-feedback d-block small mt-1">{{ err }}</div>
-                                {% endfor %}
-                            </div>
-
                             <!-- Bio -->
                             <div class="mb-3">
                                 {{ teacher_form.bio.label(class="form-label") }}
@@ -358,9 +345,12 @@
     </div>
 </div>
 
+<div id="programsConfigData" class="d-none" data-programs="{{ programs_json | e }}"></div>
+
 <script>
 // Dynamic Programs, Specializations, Years, and Semesters
-const PROGRAMS_CONFIG = {{ programs_json | safe }};
+const programsConfigEl = document.getElementById('programsConfigData');
+const PROGRAMS_CONFIG = programsConfigEl ? JSON.parse(programsConfigEl.dataset.programs || '{}') : {};
 
 function switchRole(role) {
     const studentCard = document.getElementById('roleCardStudent');

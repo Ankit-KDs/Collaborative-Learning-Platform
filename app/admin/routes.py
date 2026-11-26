@@ -12,6 +12,7 @@ Controller endpoints for platform administration:
 """
 
 import json
+from typing import Any, cast
 from flask import (
     render_template,
     request,
@@ -426,7 +427,7 @@ def export_file(export_type: str):
         ip=client_ip,
     )
 
-    response = Response(stream_with_context(gen), mimetype="text/csv")
+    response = Response(stream_with_context(cast(Any, gen)), mimetype="text/csv")
     response.headers["Content-Disposition"] = f'attachment; filename="{filename}.csv"'
     return response
 
@@ -449,6 +450,6 @@ def export_table(table_name: str):
     )
 
     gen = generate_table_csv(table_name)
-    response = Response(stream_with_context(gen), mimetype="text/csv")
+    response = Response(stream_with_context(cast(Any, gen)), mimetype="text/csv")
     response.headers["Content-Disposition"] = f'attachment; filename="table_{table_name}.csv"'
     return response

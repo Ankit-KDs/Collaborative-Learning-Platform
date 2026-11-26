@@ -160,7 +160,7 @@ def send_message(room_id: int):
             user_id=current_user.id,
             source="chat",
             action="flagged",
-            matched_count=scan_res["matched_count"],
+            matched_count=int(scan_res["matched_count"]),
         )
 
     msg = Message(
